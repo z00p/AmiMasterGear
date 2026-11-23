@@ -30,10 +30,17 @@ ColorDebug=1
 
 ; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+	IFD	AUTOTEST
+	JSR	AutoArgs		; test builds: the ROM is the command line
+	ENDC
 	JSR	InitSistema
 
 	BRA.S	Vamos
+	IFD	AMG_TITLES
+	DC.B	"$VER: AmiMasterGear 1.1 (23.11.2026)",0,0
+	ELSE
 	DC.B	"$VER:AmiMasterGear Emulator v0.8 (12.12.99)",0,0
+	ENDC
 	DC.B	"By: Juan Antonio Gómez Gálvez.",0,0
 	CNOP	0,8
 Vamos:
@@ -149,15 +156,25 @@ BucRelen0:
 JoyControlPrg:
 	DC.L	LeeJoyStick
 	DC.L	LeeTeclado
+	IFD	AMG_PADS
+	DC.L	AmgPad1Kit
+	DC.L	AmgPad1Low
+	ELSE
 	DC.L	LeeCD32Joypad
 	DC.L	LeeJoypad
+	ENDC
 
 	CNOP	0,8
 JoyControlPrg2:
 	DC.L	LeeJoyStick2
 	DC.L	LeeTeclado2
+	IFD	AMG_PADS
+	DC.L	AmgPad2Kit
+	DC.L	AmgPad2Low
+	ELSE
 	DC.L	LeeCD32Joypad2
 	DC.L	LeeJoypad2
+	ENDC
 
 ; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -369,6 +386,25 @@ InitPSG:
 ; ------------------------------------> Crea Tablas de Paginación.
 	CNOP	0,4
 CreaTabPag:
+	IFD	AMG_RAMMIRROR
+	LEA	PagRead(A3),A0		; eight 8K pages
+	LEA	Restas(A3),A1
+	LEA	Desbor(A1),A2
+	MOVEQ	#0,D1
+	MOVEQ	#(8-1),D0
+AmgCreaTabPag8:
+	MOVE.L	(A0)+,D2
+	MOVE.W	D2,(A1)+
+	ADDQ	#$6,A1
+	ADD.L	D1,D2
+	ADDQ.L	#$1,D2
+	MOVE.L	D2,(A2)+
+	ADD.L	#$1FFF,D2
+	MOVE.L	D2,(A2)+
+	ADD.L	#$2000,D1
+	DBF	D0,AmgCreaTabPag8
+	RTS
+	ENDC
 	LEA	PagRead(A3),A0
 	LEA	Restas(A3),A1
 	LEA	Desbor(A1),A2	; (CUIDADO: Según Puntero "Restas")
@@ -424,7 +460,7 @@ PONP:	MACRO
 FLAGSBUC:
 	MOVEQ	#0,D7
 	OR.B	D0,D7
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	PONP
 	MOVE.B	D3,(A0)+
 ;	----
@@ -483,9 +519,17 @@ CogePag:MACRO
 	MOVE.L	\1,\2
 	IFC	"D1","\1"
 	LSR.W	#8,D1
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D1
+	ELSE
 	LSR.B	#6,D1
+	ENDC
 	ELSEIF
+	IFD	AMG_RAMMIRROR
+	BFEXTU	\1{16:3},D1
+	ELSE
 	BFEXTU	\1{16:2},D1
+	ENDC
 	ENDC
 	ADD.L	PagRead(A3,D1.W*4),\2
 	ENDM
@@ -493,9 +537,17 @@ CogePag:MACRO
 CogePag2:MACRO
 	IFC	"D1","\1"
 	LSR.W	#8,D1
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D1
+	ELSE
 	LSR.B	#6,D1
+	ENDC
 	ELSEIF
+	IFD	AMG_RAMMIRROR
+	BFEXTU	\1{16:3},D1
+	ELSE
 	BFEXTU	\1{16:2},D1
+	ENDC
 	ENDC
 	ADD.L	PagRead(A3,D1.W*4),\2
 	ENDM
@@ -504,7 +556,11 @@ CogePagI:MACRO
 	ADD.W	\1,D1
 	MOVE.L	D1,\2
 	LSR.W	#8,D1
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D1
+	ELSE
 	LSR.B	#6,D1
+	ENDC
 	ADD.L	PagRead(A3,D1.W*4),\2
 	ENDM
 
@@ -512,9 +568,17 @@ CogePagE:MACRO
 	MOVE.L	\1,\2
 	IFC	"D1","\1"
 	LSR.W	#8,D1
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D1
+	ELSE
 	LSR.B	#6,D1
+	ENDC
 	ELSEIF
+	IFD	AMG_RAMMIRROR
+	BFEXTU	\1{16:3},D1
+	ELSE
 	BFEXTU	\1{16:2},D1
+	ENDC
 	ENDC
 	ADD.L	PagWrite(A3,D1.W*4),\2
 	ENDM
@@ -522,9 +586,17 @@ CogePagE:MACRO
 CogePagE2:MACRO
 	IFC	"D1","\1"
 	LSR.W	#8,D1
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D1
+	ELSE
 	LSR.B	#6,D1
+	ENDC
 	ELSEIF
+	IFD	AMG_RAMMIRROR
+	BFEXTU	\1{16:3},D1
+	ELSE
 	BFEXTU	\1{16:2},D1
+	ENDC
 	ENDC
 	ADD.L	PagWrite(A3,D1.W*4),\2
 	ENDM
@@ -533,9 +605,31 @@ CogePagIE:MACRO
 	ADD.W	\1,D1
 	MOVE.L	D1,\2
 	LSR.W	#8,D1
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D1
+	ELSE
 	LSR.B	#6,D1
+	ENDC
 	ADD.L	PagWrite(A3,D1.W*4),\2
 	ENDM
+	IFD	AMG_RAMMIRROR
+; AMG_RAMMIRROR: a 16K slot (\1 = 0-2) is two 8K pages with the same base (D1, used up): read
+; pointers, the words that give the Z80 PC and the run-off bounds, as CreaTabPag makes them.
+AmgPag8:	MACRO
+	MOVE.L	D1,PagRead+(\1*8)(A3)
+	MOVE.L	D1,PagRead+(\1*8)+4(A3)
+	MOVE.W	D1,Restas+(\1*16)(A3)
+	MOVE.W	D1,Restas+(\1*16)+8(A3)
+	ADD.L	#(\1*$4000)+1,D1
+	MOVE.L	D1,Restas+Desbor+(\1*16)(A3)
+	ADD.L	#$1FFF,D1
+	MOVE.L	D1,Restas+Desbor+(\1*16)+4(A3)
+	ADDQ.L	#1,D1
+	MOVE.L	D1,Restas+Desbor+(\1*16)+8(A3)
+	ADD.L	#$1FFF,D1
+	MOVE.L	D1,Restas+Desbor+(\1*16)+12(A3)
+	ENDM
+	ENDC
 ; ------------------------------------<=
 
 
@@ -688,6 +782,17 @@ EsContinue:
 	MOVE.L	#IRAM-$C000,PagWrite+$C(A3)
 
 	MOVE.L	#IRAM-$C000,PagRead+$C(A3)
+	IFD	AMG_RAMMIRROR
+	MOVE.L	#NoRAM-$0000,PagWrite+$04(A3)	; 8K pages; the mapper sets the ROM read pages
+	MOVE.L	#NoRAM-$4000,PagWrite+$08(A3)
+	MOVE.L	#NoRAM-$4000,PagWrite+$0C(A3)
+	MOVE.L	#NoRAM-$8000,PagWrite+$10(A3)
+	MOVE.L	#NoRAM-$8000,PagWrite+$14(A3)
+	MOVE.L	#IRAM-$C000,PagWrite+$18(A3)	; $C000-$DFFF
+	MOVE.L	#IRAM-$E000,PagWrite+$1C(A3)	; $E000-$FFFF: the same 8K, as on the console
+	MOVE.L	#IRAM-$C000,PagRead+$18(A3)
+	MOVE.L	#IRAM-$E000,PagRead+$1C(A3)
+	ENDC
 ;	-=-=-=-=-=-=-=-=-=-=-=-
 
 ; ----------------------------------	; Refresca Gráficos.
@@ -696,6 +801,9 @@ EsContinue:
 ClrPanBuc:
 	NOT.W	(A0)+
 	DBF	D0,ClrPanBuc
+	IFD	AMG_TMSMODES
+	SF	AmgTmsOn		; a TMS mode picture is drawn whole too
+	ENDC
 
 	JSR	ImprimeGfx
 	JSR	ImprimeGfx2
@@ -708,6 +816,12 @@ ClrPanBuc:
 ; ----------------------------------
 	LEA	Regs,A3
 	MOVE.L	MapperIO(A3),IRAM+$3FFC
+	IFD	AMG_CODIES
+	JSR	AmgCmInstall		; Codemasters or Sega mapper, from the header
+	ENDC
+	IFD	AMG_PORTMIRROR
+	JSR	AmgPortMirror		; the ports' mirrors, as the console decodes them
+	ENDC
 	JSR	MapperInit
 	BSR	CreaTabPag
 ; ----------------------------------
@@ -870,7 +984,7 @@ OtraEI:	MACRO
 
 
 OtraT:	MACRO
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	Otra	\1
 	ENDM
 
@@ -927,7 +1041,7 @@ PONF:	MACRO
 	ENDM
 
 PONS:	MACRO
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D1,D3{31:1}
 	ENDM
 
@@ -1077,7 +1191,7 @@ MIns:	MACRO
 	MOVE.B	D3,D1
 	MOVE.B	\2,D2
 	\1	D2,\2
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D1,D3{31:1}
 	MOVE.B	D2,\2
 	Otra	\7
@@ -1086,7 +1200,7 @@ MIns:	MACRO
 	IFC	"7B","\4"		; Ins. INC registros Altos.
 	MOVE.B	D3,D1
 	\1	#$100,\2
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D3,D3{29:1}
 	BFINS	D1,D3{31:1}
 	Otra	\7
@@ -1103,6 +1217,22 @@ MIns:	MACRO
 	CogePagE \2,A4
 	PONF	\5,\6
 	\1	\3,(A4)
+	IFD	AMG_BITMAP
+	IFC	"N","\5"		; SET/RES: a write; $FFFC-$FFFF reach the mapper
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4
+	BCS.S	\@B
+	CMP.W	#$FFFC,\2		; HL
+	BCS.S	\@B
+	JMP	AmgIxMapR15
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4
+	BCS.S	\@B
+	JMP	AmgIxMap15		; SET/RES (HL): 15 cycles
+	ENDC
+\@B:
+	ENDC
+	ENDC
 	PonCCR	\5,\7			; Recoge Flags.
 	ENDC
 
@@ -1133,6 +1263,25 @@ MIns:	MACRO
 	CogePagIE \2,A4
 	PONF	\5,\6
 	\1	\3,(A4)
+	IFD	AMG_BITMAP
+	IFC	"N","\5"		; SET/RES: a write; $FFFC-$FFFF reach the mapper
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4
+	BCS.S	\@B
+	MOVE.B	-2(A5),D1		; DD CB d op
+	EXT.W	D1
+	ADD.W	\2,D1
+	CMP.W	#$FFFC,D1
+	BCS.S	\@B
+	JMP	AmgIxMapR23
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4
+	BCS.S	\@B
+	JMP	AmgIxMap23		; SET/RES (IX/IY+d): 23 cycles
+	ENDC
+\@B:
+	ENDC
+	ENDC
 	PonCCR	\5,\7			; Recoge Flags.
 	ENDC
 
@@ -1200,7 +1349,7 @@ MROT:	MACRO
 	LSR.B	#1,D3
 	ENDC
 	\1	#1,D2
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	MOVE.B	D2,(A4)
 	ENDC
 
@@ -1214,7 +1363,7 @@ MROT:	MACRO
 	LSR.B	#1,D3
 	ENDC
 	\1	#1,D2
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	MOVE.B	D2,(A4)
 	ENDC
 
@@ -1226,7 +1375,7 @@ MROT:	MACRO
 	LSR.B	#1,D3
 	ENDC
 	\1	#1,\2
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	ENDC
 
 	IFC	"1","\4"		; Rotación en registros altos.
@@ -1238,7 +1387,7 @@ MROT:	MACRO
 	LSR.B	#1,D3
 	ENDC
 	\1	#1,\2
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	ROR.W	#8,\2
 	ENDC
 ; ---------------------------
@@ -1553,11 +1702,35 @@ MLDRR:	MACRO
 	EXT.W	D1
 	CogePagIE \1,A4
 	MOVE.B	\2,(A4)
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X0
+	JMP	AmgIxMapR\4D1\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X0
+	JMP	AmgIxMap\4
+	ENDC
+\@X0:
+	ENDC
 	Otra	\4
 \@M:	CheckB	D1
 	EXT.W	D1
 	CogePagIE \1,A4
 	MOVE.B	\2,(A4)
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X1
+	JMP	AmgIxMapR\4D1\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X1
+	JMP	AmgIxMap\4
+	ENDC
+\@X1:
+	ENDC
 	Otra	\4
 	ENDC
 
@@ -1570,6 +1743,18 @@ MLDRR:	MACRO
 	MOVE.W	\2,D1
 	LSR.W	#8,D1
 	MOVE.B	D1,(A4)
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X0
+	JMP	AmgIxMapR\4D1\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X0
+	JMP	AmgIxMap\4
+	ENDC
+\@X0:
+	ENDC
 	Otra	\4
 \@M:	CheckB	D1
 	EXT.W	D1
@@ -1577,6 +1762,18 @@ MLDRR:	MACRO
 	MOVE.W	\2,D1
 	LSR.W	#8,D1
 	MOVE.B	D1,(A4)
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X1
+	JMP	AmgIxMapR\4D1\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X1
+	JMP	AmgIxMap\4
+	ENDC
+\@X1:
+	ENDC
 	Otra	\4
 	ENDC
 
@@ -1588,14 +1785,50 @@ MLDRR:	MACRO
 	CogePagIE \1,A4
 	MOVE.B	(A5)+,(A4)
 	BEQ.S	\@M2
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X0
+	JMP	AmgIxMapR\4D2\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X0
+	JMP	AmgIxMap\4
+	ENDC
+\@X0:
+	ENDC
 	Otra	\4
 \@M:	CheckB	D1
 	EXT.W	D1
 	CogePagIE \1,A4
 	MOVE.B	(A5)+,(A4)
 	BEQ.S	\@M2
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X1
+	JMP	AmgIxMapR\4D2\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X1
+	JMP	AmgIxMap\4
+	ENDC
+\@X1:
+	ENDC
 	Otra	\4
 \@M2:	CheckB	(A4)
+	IFD	AMG_IXMAP
+	IFD	AMG_RAMMIRROR
+	CMP.L	#IRAM+$1FFC,A4		; $xFFC-$xFFF: the mapper if $FFFC-$FFFF
+	BCS.S	\@X2
+	JMP	AmgIxMapR\4D2\1
+	ELSE
+	CMP.L	#IRAM+$3FFC,A4		; $FFFC-$FFFF: the mapper too
+	BCS.S	\@X2
+	JMP	AmgIxMap\4
+	ENDC
+\@X2:
+	ENDC
 	Otra	\4
 	ENDC
 
@@ -1685,7 +1918,7 @@ MJR:	MACRO
 	ENDM
 
 MJRC:	MACRO
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	B\1.S	\@
 	ADDQ.W	#1,A5
 	Otra	\3
@@ -1712,7 +1945,7 @@ MJP:	MACRO
 	ENDM
 
 MJPC:	MACRO
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	B\1.S	\@
 	ADDQ.W	#2,A5
 	Otra	\2
@@ -1780,7 +2013,7 @@ MCALL:	MACRO
 	ENDM
 
 MCALLC:	MACRO
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	B\1.S	\@
 	ADDQ.W	#2,A5
 	Otra	\3
@@ -1953,7 +2186,7 @@ MRET:	MACRO
 	ENDM
 
 MRETC:	MACRO
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	B\1.S	\@
 	Otra	\3
 \@:	MRET	\2
@@ -1969,12 +2202,12 @@ MINC:	MACRO
 	MOVE.B	D3,D2
 	IFC	"1","\2"
 	LSL.W	#8,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	MOVE.B	\1,D1
 	MOVE.W	D1,\1
 	ELSEIF
 	MOVE.B	D1,\1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	ENDC
 	BFINS	D2,D3{31:1}
 	Otra	\3
@@ -2423,7 +2656,7 @@ LDAMM:	CheckW	D1
 LDAI:
 	MOVE.B	D3,D1
 	MOVE.B	I(A3),D7
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D1,D3{31:1}
 	MOVE.B	IFF(A3),D1
 	BFINS	D1,D3{30:1}
@@ -2433,7 +2666,7 @@ LDAR:
 	MOVE.B	$DFF007,D7
 	AND.B	#$7F,D7
 	OR.B	R(A3),D7
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D1,D3{31:1}
 	MOVE.B	IFF(A3),D1
 	BFINS	D1,D3{30:1}
@@ -2627,30 +2860,30 @@ DAA:
 CONTD:
 	SUB.B	D2,D7
 	BCS.S	RESTA
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	BCS.S	RESTAB
 SUMA:
-	MOVE.B	#04,CCR
+	MOVE.W	#04,CCR
 	ABCD.B	D2,D7
 	OtraT	4
 RESTA:
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	BCS.S	SUMA
 RESTAB:
 	NEG.B	D7
 	MOVE.B	D2,D1
 	MOVE.B	D7,D2
 	MOVE.B	D1,D7
-	MOVE.B	#04,CCR
+	MOVE.W	#04,CCR
 	SBCD.B	D2,D7
 	OtraT	4
 MIRAC:
-	MOVE.B	D3,CCR
+	MOVE.W	D3,CCR
 	BCC	CONTD
 	MOVE.B	D7,D2
 	NEG.B	D2
 	SF	D7
-	MOVE.B	#04,CCR
+	MOVE.W	#04,CCR
 	SBCD.B	D2,D7
 	OtraT	4
 
@@ -2664,11 +2897,11 @@ ICPL:	NOT.B	D7
 
 NEG:	NEG.B	D7
 	BEQ.S	ERA0
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	AND.B	#$7E,D3
 	OR.B	#$02,D3
 	Otra	8
-ERA0:	MOVE.B	CCR,D3
+ERA0:	MOVE.W	CCR,D3
 	AND.B	#$7D,D3
 	OR.B	#$01,D3
 	Otra	8
@@ -2880,7 +3113,7 @@ INCHX:
 	ROR.W	#8,D1
 	MOVE.B	D3,D2
 	ADDQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	ROR.W	#8,D1
 	MOVE.L	D1,A0
@@ -2889,7 +3122,7 @@ INCLX:
 	MOVE.W	A0,D1
 	MOVE.B	D3,D2
 	ADDQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	MOVE.L	D1,A0
 	Otra	9
@@ -2898,7 +3131,7 @@ DECHX:
 	ROR.W	#8,D1
 	MOVE.B	D3,D2
 	SUBQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	ROR.W	#8,D1
 	MOVE.L	D1,A0
@@ -2907,7 +3140,7 @@ DECLX:
 	MOVE.W	A0,D1
 	MOVE.B	D3,D2
 	SUBQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	MOVE.L	D1,A0
 	Otra	9
@@ -3122,7 +3355,7 @@ INCHY:
 	ROR.W	#8,D1
 	MOVE.B	D3,D2
 	ADDQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	ROR.W	#8,D1
 	MOVE.L	D1,A1
@@ -3131,7 +3364,7 @@ INCLY:
 	MOVE.W	A1,D1
 	MOVE.B	D3,D2
 	ADDQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	MOVE.L	D1,A1
 	Otra	9
@@ -3140,7 +3373,7 @@ DECHY:
 	ROR.W	#8,D1
 	MOVE.B	D3,D2
 	SUBQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	ROR.W	#8,D1
 	MOVE.L	D1,A1
@@ -3149,7 +3382,7 @@ DECLY:
 	MOVE.W	A1,D1
 	MOVE.B	D3,D2
 	SUBQ.B	#1,D1
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	MOVE.L	D1,A1
 	Otra	9
@@ -3393,7 +3626,7 @@ MULUBAE:
 
 MULUWHLBC:
 	MULU	D5,D4
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	SWAP	D4
 	MOVE.W	D4,D6
 	CLR.W	D4
@@ -3402,7 +3635,7 @@ MULUWHLBC:
 
 MULUWHLSP:
 	MULU	D0,D4
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	SWAP	D4
 	MOVE.W	D4,D6
 	CLR.W	D4
@@ -3538,7 +3771,7 @@ IRRD:
 	ROL.W	#4,D1
 	AND.B	#$F0,D7
 	OR.B	D1,D7
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	Otra	12
 
@@ -3554,7 +3787,7 @@ IRLD:
 	LSR.W	#8,D1
 	AND.B	#$F0,D7
 	OR.B	D1,D7
-	MOVE.B	CCR,D3
+	MOVE.W	CCR,D3
 	BFINS	D2,D3{31:1}
 	Otra	12
 
@@ -4107,14 +4340,22 @@ IN0C:	SUBQ.W	#1,A5
 Mapper2:
 	MOVE.B	(A4)+,D1
 	MOVE.B	(A4),D2
+	IFD	AMG_RAMMIRROR
+	SUB.L	#IRAM+$1FFC+1,A4
+	ELSE
 	SUB.L	#IRAM+$3FFC+1,A4
+	ENDC
 	JSR	([MapperROM.w,PC,A4.W*4])
 	MOVE.B	D2,D1
 	JSR	([MapperROM+4.w,PC,A4.W*4])
 	Otra	4
 Mapper:
 	MOVE.B	(A4),D1
+	IFD	AMG_RAMMIRROR
+	SUB.L	#IRAM+$1FFC,A4		; $FFFC-$FFFF in RAM
+	ELSE
 	SUB.L	#IRAM+$3FFC,A4
+	ENDC
 	JSR	([MapperROM.w,PC,A4.W*4])
 	Otra	4
 
@@ -4127,13 +4368,21 @@ MapperROM:
 ; -=-=-=-
 	CNOP	0,8
 FFFC:
+	IFD	AMG_RAMMIRROR
+	MOVE.B	D1,IRAM+$3FFC		; the mapper's own register
+	ELSE
 	MOVE.B	D1,IRAM+$1FFC
+	ENDC
 	MOVE.B	IRAM+$3FFF,D1
 	BRA	FFFF
 ; -=-=-=-
 	CNOP	0,8
 FFFD:
+	IFD	AMG_RAMMIRROR
+	MOVE.B	D1,IRAM+$3FFD		; the mapper's own register
+	ELSE
 	MOVE.B	D1,IRAM+$1FFD
+	ENDC
 
 	SUB.W	4(A7),A5
 
@@ -4143,6 +4392,9 @@ FFFD:
 	ADD.L	MapROMBase(A3),D1
 	ADD.L	#$4000,D1
 
+	IFD	AMG_RAMMIRROR
+	AmgPag8	0
+	ELSE
 	MOVE.L	D1,PagRead+$0(A3)
 
 	MOVE.W	D1,Restas+($0*2)(A3)
@@ -4151,6 +4403,7 @@ FFFD:
 	MOVE.L	D1,Restas+Desbor+($0)(A3)
 	ADD.L	#$3FFF,D1
 	MOVE.L	D1,Restas+Desbor+($4)(A3)
+	ENDC
 
 	MOVEQ	#0,D1
 	MOVE.W	A5,D1
@@ -4162,7 +4415,11 @@ FFFD:
 
 	CNOP	0,8
 FFFE:
+	IFD	AMG_RAMMIRROR
+	MOVE.B	D1,IRAM+$3FFE		; the mapper's own register
+	ELSE
 	MOVE.B	D1,IRAM+$1FFE
+	ENDC
 
 	SUB.W	4(A7),A5
 
@@ -4171,6 +4428,9 @@ FFFE:
 	MULU	#$4080,D1
 	ADD.L	MapROMBase(A3),D1
 
+	IFD	AMG_RAMMIRROR
+	AmgPag8	1
+	ELSE
 	MOVE.L	D1,PagRead+$4(A3)
 
 	MOVE.W	D1,Restas+($4*2)(A3)
@@ -4179,6 +4439,7 @@ FFFE:
 	MOVE.L	D1,Restas+Desbor+($08)(A3)
 	ADD.L	#$3FFF,D1
 	MOVE.L	D1,Restas+Desbor+($0C)(A3)
+	ENDC
 
 	MOVEQ	#0,D1
 	MOVE.W	A5,D1
@@ -4190,7 +4451,11 @@ FFFE:
 
 	CNOP	0,8
 FFFF:
+	IFD	AMG_RAMMIRROR
+	MOVE.B	D1,IRAM+$3FFF		; the mapper's own register
+	ELSE
 	MOVE.B	D1,IRAM+$1FFF
+	ENDC
 
 	SUB.W	4(A7),A5
 
@@ -4200,13 +4465,32 @@ FFFF:
 	ADD.L	MapROMBase(A3),D1
 	SUB.L	#$4000,D1
 
+	IFD	AMG_RAMMIRROR
+	MOVE.L	#NoRAM-$8000,PagWrite+$10(A3)
+	MOVE.L	#NoRAM-$8000,PagWrite+$14(A3)
+	ELSE
 	MOVE.L	#NoRAM-$8000,PagWrite+$8(A3)
+	ENDC
 	BTST	#3,IRAM+$3FFC
 	BEQ.S	FFFFCon
 	MOVE.L	#SRAM-$8000,D1
+	IFD	AMG_SRAM2
+	BTST	#2,IRAM+$3FFC		; RAM bank 1
+	BEQ.S	AmgSram2B0
+	ADD.L	#$4000,D1
+AmgSram2B0:
+	ENDC
+	IFD	AMG_RAMMIRROR
+	MOVE.L	D1,PagWrite+$10(A3)
+	MOVE.L	D1,PagWrite+$14(A3)
+	ELSE
 	MOVE.L	D1,PagWrite+$8(A3)
+	ENDC
 FFFFCon:
 
+	IFD	AMG_RAMMIRROR
+	AmgPag8	2
+	ELSE
 	MOVE.L	D1,PagRead+$8(A3)
 
 	MOVE.W	D1,Restas+($8*2)(A3)
@@ -4215,6 +4499,7 @@ FFFFCon:
 	MOVE.L	D1,Restas+Desbor+($10)(A3)
 	ADD.L	#$3FFF,D1
 	MOVE.L	D1,Restas+Desbor+($14)(A3)
+	ENDC
 
 	MOVEQ	#0,D1
 	MOVE.W	A5,D1
@@ -4238,6 +4523,9 @@ MapperInit:
 	ADD.L	MapROMBase(A3),D1
 	ADD.L	#$4000,D1
 
+	IFD	AMG_RAMMIRROR
+	AmgPag8	0
+	ELSE
 	MOVE.L	D1,PagRead+$0(A3)
 
 	MOVE.W	D1,Restas+($0*2)(A3)
@@ -4246,6 +4534,7 @@ MapperInit:
 	MOVE.L	D1,Restas+Desbor+($0)(A3)
 	ADD.L	#$3FFF,D1
 	MOVE.L	D1,Restas+Desbor+($4)(A3)
+	ENDC
 ; -=-=-=-
 	MOVE.B	IRAM+$3FFE,D1
 
@@ -4254,6 +4543,9 @@ MapperInit:
 	MULU	#$4080,D1
 	ADD.L	MapROMBase(A3),D1
 
+	IFD	AMG_RAMMIRROR
+	AmgPag8	1
+	ELSE
 	MOVE.L	D1,PagRead+$4(A3)
 
 	MOVE.W	D1,Restas+($4*2)(A3)
@@ -4262,6 +4554,7 @@ MapperInit:
 	MOVE.L	D1,Restas+Desbor+($08)(A3)
 	ADD.L	#$3FFF,D1
 	MOVE.L	D1,Restas+Desbor+($0C)(A3)
+	ENDC
 ; -=-=-=-
 	MOVE.B	IRAM+$3FFF,D1
 
@@ -4271,13 +4564,32 @@ MapperInit:
 	ADD.L	MapROMBase(A3),D1
 	SUB.L	#$4000,D1
 
+	IFD	AMG_RAMMIRROR
+	MOVE.L	#NoRAM-$8000,PagWrite+$10(A3)
+	MOVE.L	#NoRAM-$8000,PagWrite+$14(A3)
+	ELSE
 	MOVE.L	#NoRAM-$8000,PagWrite+$8(A3)
+	ENDC
 	BTST	#3,IRAM+$3FFC
 	BEQ.S	FFFFCon2
 	MOVE.L	#SRAM-$8000,D1
+	IFD	AMG_SRAM2
+	BTST	#2,IRAM+$3FFC		; RAM bank 1
+	BEQ.S	AmgSram2B0b
+	ADD.L	#$4000,D1
+AmgSram2B0b:
+	ENDC
+	IFD	AMG_RAMMIRROR
+	MOVE.L	D1,PagWrite+$10(A3)
+	MOVE.L	D1,PagWrite+$14(A3)
+	ELSE
 	MOVE.L	D1,PagWrite+$8(A3)
+	ENDC
 FFFFCon2:
 
+	IFD	AMG_RAMMIRROR
+	AmgPag8	2
+	ELSE
 	MOVE.L	D1,PagRead+$8(A3)
 
 	MOVE.W	D1,Restas+($8*2)(A3)
@@ -4286,6 +4598,7 @@ FFFFCon2:
 	MOVE.L	D1,Restas+Desbor+($10)(A3)
 	ADD.L	#$3FFF,D1
 	MOVE.L	D1,Restas+Desbor+($14)(A3)
+	ENDC
 
 	MOVEQ	#0,D1
 
@@ -4372,10 +4685,17 @@ Outs:
 	CNOP	0,4
 	DS.L	20
 
+	IFD	AMG_RAMMIRROR
+PagRead=-$80		; 8K pages: 8 longs in the DS.L 20 above
+PagWrite=$10		; 8 longs
+Restas=$34		; 8 x 8 bytes to $6F; the 4 bytes before each are a JSR slot (I/O calls)
+Desbor=$500-Restas	; 8 x (low, high)
+	ELSE
 PagRead=$10
 PagWrite=$20
 Restas=$34
 Desbor=$50-Restas
+	ENDC
 
 	DC.W	0	; -$60(A3)
 	DC.W	0	; -$5E(A3)	VLines
@@ -4828,6 +5148,9 @@ MiraInter193:
 	LEA	BufBasura(PC),A7
 ;	---
 	BSR	Emula1Frame
+	IFD	AUTOTEST
+	JSR	AutoFrame
+	ENDC
 ;	---
 	LEA	Regs(PC),A3
 	MOVEM.L	Bufer(A3),D0-D7/A0-A7
@@ -4859,6 +5182,9 @@ InterRun:
 ;	----------------
 	MOVE.B	IFF(A3),IFF0(A3)
 	SF	IFF(A3)			; ( DI ) Interrupciones OFF.
+	IFD	AUTODUMP
+	ADDQ.L	#1,AutoIrqs		; test builds: interrupts taken
+	ENDC
 
 ;	----------------------=>  Mira si estamos en Halt y procede...
 	TST.B	HaltDat(A3)
@@ -5030,6 +5356,11 @@ SkipSprFrame2:
 	CNOP	0,4
 Wait60fps:
 	LEA	Regs(PC),A3
+	IFD	AUTOTEST
+	IFND	AUTOSYNC		; AUTOSYNC: real speed (sound recordings)
+	BRA	NoWait60fps		; test builds run as fast as they can
+	ENDC
+	ENDC
 	CMP.B	#2,DirPrefs+$13		; ¿Modo Turbo?
 	BEQ.S	NoWait60fps
 
@@ -5508,6 +5839,11 @@ AcCoRutRGBbuc:
 	BFINS	D2,D1{24:2}	; G
 	LSR.B	#2,D2
 	BFINS	D2,D1{28:2}	; B
+	IFD	AMG_PALFULL
+	MOVE.W	D1,D2			; each 4-bit level = 2-bit level * 5
+	LSR.W	#2,D2
+	OR.W	D2,D1
+	ENDC
 	BRA.S	ConvPalMS
 ConvPalGG:
 	MOVE.W	(A0)+,D1
@@ -5708,6 +6044,14 @@ DATOSS:
 
 	CNOP	0,8
 ImprimeGfx:
+	IFD	AMG_TMSMODES
+	BTST	#2,VDPRegs+0(PC)	; TMS9918 modes (M4 clear), or one just left: Amg10.asm
+	BEQ.S	AmgTmsH0
+	TST.B	AmgTmsOn
+	BEQ.S	AmgTmsH1
+AmgTmsH0:	JMP	AmgTmsGfx
+AmgTmsH1:
+	ENDC
 	LEA	PantAnt(PC),A5		; Código texto actualmente impreso.
 
 	LEA	TablaFlipX,A6		; Tabla para modo Flip X
@@ -6200,6 +6544,12 @@ NoRedef7:
 
 	CNOP	0,8
 EscribeSpr:
+	IFD	AMG_TMSMODES
+	BTST	#2,VDPRegs+0(PC)	; TMS9918 sprites: Amg10.asm
+	BNE.S	AmgTmsS1
+	JMP	AmgTmsSpr
+AmgTmsS1:
+	ENDC
 
 	MOVE.L	#$00FE000F,D7
 	BTST	#1,VDPRegs+1(PC)
@@ -6670,6 +7020,9 @@ TabDirMask:	DS.L	256
 ; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	CNOP	0,8
 TocaPSG:
+	IFD	AMG_PSG
+	JMP	AmgPsgPlay		; Amg10.asm
+	ENDC
 	LEA	$DFF000,A6
 
 	MOVEQ	#0,D1
@@ -6765,6 +7118,12 @@ EstaOff3:
 
 	CNOP	0,8
 PonePaletaMS:
+	IFD	AMG_TMSMODES
+	BTST	#2,VDPRegs+0(PC)	; TMS9918 fixed palette: Amg10.asm
+	BNE.S	AmgTmsP1
+	JMP	AmgTmsPal
+AmgTmsP1:
+	ENDC
 	LEA	VPAL,A0
 	TST.B	Regs+Consola(PC)
 	BNE.S	PonePaletaGG
@@ -6787,6 +7146,11 @@ PonPalBucMS:
 	LSR.B	#2,D0
 
 	BFINS	D0,D1{28:2}	; B
+	IFD	AMG_PALFULL
+	MOVE.W	D1,D0			; each 4-bit level = 2-bit level * 5
+	LSR.W	#2,D0
+	OR.W	D0,D1
+	ENDC
 
 	MOVE.W	D1,(A1)
 	ADDQ.W	#4,A1
@@ -6857,6 +7221,26 @@ OUTBFb:
 	RTS
 
 EsVDP:
+	IFD	AMG_VDPCODE2
+; As on the real VDP: a register write ($80-$BF) also loads the address register, and the data port
+; then writes to VRAM; the register number is the low four bits. v0.8 sent $A0-$BF to a dummy
+; buffer and left the address alone, so Ax Battler's sprite table at $3F00 was never written.
+	CMP.B	#$C0,D1
+	BCC.S	EsVPAL
+	SWAP	D2
+	MOVE.L	#INBE,Ins+($BE*4)
+	MOVE.L	#OUTBEa,Outs+($BE*4)
+	MOVE.W	D1,A4
+	AND.W	#$3F,D1
+	LSL.W	#8,D1
+	MOVE.B	D2,D1
+	MOVE.W	D1,DirVRAM(A3)
+	LEA	(VRAM.L,D1.W),A2
+	MOVE.W	A4,D1
+	AND.L	#$0F,D1
+	MOVE.B	D2,(VDPRegs,D1.W)
+	JMP	([VDPRuts.W,PC,D1.W*4])
+	ENDC
 ;;	BTST	#6,D1			;  - Antiguo
 ;;	BNE.S	EsVPAL			; /
 	CMP.B	#$A0,D1		; <=- No es seguro.
@@ -7026,9 +7410,20 @@ INBEb:
 INBF:
 	SF	IOBF(A3)
 	MOVE.B	Estado(A3),D1
+	IFD	AUTODUMP
+	ADDQ.L	#1,AutoStatRd		; test builds: status reads, and those with bit 7
+	TST.B	D1
+	BPL.S	.amgdump
+	ADDQ.L	#1,AutoStat7
+.amgdump:
+	ENDC
+	IFD	AMG_VDPSTATUS
+	JMP	AmgVdpStatRd		; the console's status bits: Amg10.asm
+	ELSE
 	AND.B	#$3F,Estado(A3)
 	BCHG	#5,Estado(A3)
 	RTS
+	ENDC
 
 ; ------------------------------------------------ ;
 
@@ -7057,6 +7452,9 @@ Nacion:
 
 	CNOP	0,8
 OUT7F:
+	IFD	AMG_PSG
+	JMP	AmgPsgOut		; Amg10.asm: the chip's latch/data protocol
+	ENDC
 	TST.B	IO7F(A3)
 	BNE.S	OUT7Fb
 	MOVE.B	D1,PSG_Old(A3)
@@ -7435,7 +7833,14 @@ LeeCD32Joypad:
 	BFINS	D2,D3{29:1}
 	OR.B	#$F0,D3
 
+	IFD	AMG_PADS
+	JSR	AmgReadCD32
+	ELSE
 	BSR	ReadCD32
+	ENDC
+	IFD	AMG_PADMAP
+	JSR	AmgPadMapP1		; Play = Pause/Start, shoulders = back to the menu
+	ELSE
 	LSR.B	#1,D0
 	MOVEQ	#-1,D1
 	MOVEQ	#-1,D2
@@ -7446,14 +7851,27 @@ LeeCD32Joypad:
 NoPlay:
 
 	CD32M	4,D3	; Boton B
+	IFD	AMG_PADS
+	LSR.B	#1,D0		; forward shoulder (a Mega Drive pad's C on a Mega Multi): Pause and Start
+	BCC.S	AmgFfwNo1
+	BCLR	#0,D2
+	BCLR	#7,D1
+AmgFfwNo1:
+	ELSE
 	CD32M	5,D3	; Boton A
+	ENDC
 	CD32M	0,D2	; Pause
 	CD32M	7,D1	; Start
 	CD32M	4,D3	; Boton B
 	CD32M	5,D3	; Boton A
+	ENDC
 
 	MOVE.B	D3,JoyX+0(A3)
+	IFD	AMG_PAUSEEDGE
+	JSR	AmgPauseEdge		; Pause: one NMI per press
+	ELSE
 	MOVE.B	D2,JoyX+3(A3)
+	ENDC
 	MOVE.B	D1,JoyX+2(A3)
 
 	RTS
@@ -7476,7 +7894,14 @@ LeeCD32Joypad2:
 	BFINS	D2,D3{29:1}
 	OR.B	#$F0,D3
 
+	IFD	AMG_PADS
+	JSR	AmgReadCD32
+	ELSE
 	BSR	ReadCD32
+	ENDC
+	IFD	AMG_PADMAP
+	JSR	AmgPadMapP2		; Play = Pause/Start, shoulders = back to the menu
+	ELSE
 	LSR.B	#1,D0
 	MOVEQ	#-1,D1
 	MOVEQ	#-1,D2
@@ -7487,11 +7912,20 @@ LeeCD32Joypad2:
 NoPlay2:
 
 	CD32M	4,D3	; Boton B
+	IFD	AMG_PADS
+	LSR.B	#1,D0		; forward shoulder (a Mega Drive pad's C on a Mega Multi): Pause and Start
+	BCC.S	AmgFfwNo2
+	BCLR	#0,D2
+	BCLR	#7,D1
+AmgFfwNo2:
+	ELSE
 	CD32M	5,D3	; Boton A
+	ENDC
 	CD32M	0,D2	; Pause
 	CD32M	7,D1	; Start
 	CD32M	4,D3	; Boton B
 	CD32M	5,D3	; Boton A
+	ENDC
 
 
 	MOVE.B	JoyX+0(A3),D0
@@ -7762,6 +8196,10 @@ Font:	INCBIN	"data/Font.raw"
 ; -------------------------------------------------- ;
 
 
+	IFD	AUTOTEST
+	INCLUDE	"AutoTest.asm"
+	ENDC
+	INCLUDE	"Amg10.asm"		; 1.0 additions, each behind its own AMG_ switch
 ;	------------------------
 	SECTION	Pantallas,DATA_C
 ;	------------------------
@@ -7993,7 +8431,11 @@ VRAM:	DS.B	16*1024
 	DS.B	$80
 IRAM:	DS.B	16*1024
 	DS.B	$80
+	IFD	AMG_SRAM2
+SRAM:	DS.B	32*1024			; two 16K banks
+	ELSE
 SRAM:	DS.B	16*1024
+	ENDC
 	DS.B	$80
 NoRAM:	DS.B	16*1024
 	DS.B	$80

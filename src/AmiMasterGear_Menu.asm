@@ -79,6 +79,19 @@ YaStc20:
 CLI:
 ; <=----------------------------------=>
 
+	IFD	AMG_TITLES
+	JSR	AmgTitles
+	ENDC
+	IFD	AMG_PADS
+	MOVE.L	#AmgPadLab3,JoyTypeLabels+12	; 'Standard Joypad' (the same read as Amiga JoyStick) -> 'KTRL CD32+'
+	ENDC
+	IFD	AMG_PADDBG
+	MOVE.L	#AmgIn00Dbg,Ins		; test: port $00 shows the raw CD32 read
+	ENDC
+	IFD	AMG_PORTLABELS
+	MOVE.L	#AmgPortLabP2,JoyPortLabels	; first button = player 1 = Amiga joystick port (2)
+	MOVE.L	#AmgPortLabP1,JoyPortLabels+4	; second = player 2 = Amiga mouse port (1)
+	ENDC
 	LEA	DirInfoText(PC),A0
 	BSR	Centrar
 
@@ -280,6 +293,9 @@ BucCart:	DC.L	0
 PagCart:	DC.W	0
 Comprimido:	DC.B	0
 RawCartSize:	DC.B	0
+	IFD	AMG_ANYSIZE
+AmgRealPages:	DC.W	0		; 16K pages in the file (PagCart is this rounded up)
+	ENDC
 CheatDir:	DC.W	0
 BucPunto:	DC.W	0
 CheckId:	DC.L	0
@@ -335,6 +351,10 @@ tErSavePrefs:	DC.B	"    Preferences not saved!    ",0
 tErNoCheats:	DC.B	" Power ON with Cheats enabled!",0
 tErPowerON:	DC.B	"   Please,  Power ON first!   ",0
 tErNoFrozen:	DC.B	"      Not a Frozen file!      ",0
+	IFD	AMG_FROZERR
+tAmgFznLoad:	DC.B	"   Frozen file not loaded!    ",0
+tAmgFznSave:	DC.B	"    Frozen file not saved!    ",0
+	ENDC
 
 ; -=-=-=-==-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=-=-
 		DS.L	10	; Seguriad
@@ -390,6 +410,9 @@ Programa:
 	BSR	ImpJoyType
 ; ------------------------------------------
 ; <=-----------------------=>
+	IFD	AMG_DRAWERS
+	JSR	AmgDrawers
+	ENDC
 	TST.L	_AslBase(PC)
 	BEQ.S	NoHayAsl
 
@@ -416,6 +439,22 @@ Programa:
 NoHayAsl:
 ; <=-----------------------=>
 BucleMenu:
+	IFD	AUTOTEST
+	BSR	DisMouse
+	BSR	InsertAuto
+	TST.L	BucCart
+	BEQ.S	.noCart
+	TST.B	AutoFailed
+	BNE.S	.noCart
+	LEA	AutoStartText,A0
+	JSR	AutoPuts
+	BSR	PowerON
+.noCart:
+	LEA	AutoEndText,A0
+	JSR	AutoPuts
+	BSR	EnaMouse
+	BRA	AutoQuit
+	ENDC
 ; ------------------------------------------
 	LEA	MainMenuPunts,A1
 	BSR	Control
@@ -438,6 +477,9 @@ NoSaveBatt:
 	JSR	CloseQuitWindow
 	BSR	EnaMouse
 ; ------------------------------------------
+	IFD	AUTOTEST
+AutoQuit:
+	ENDC
 	BSR	CloseMainMenuWindow
 ; ------------------------------------------
 ; --------------------------		; Screen mode on Exit.
@@ -545,6 +587,9 @@ ImprHelpJoy:
 ; ------------------------------------------
 
 ImpError:
+	IFD	AUTOTEST
+	JMP	AutoError		; on the serial port, no window to click
+	ENDC
 	MOVE.L	A0,ImpErrorText0+$C
 
 	BSR	DisMouse
@@ -608,7 +653,11 @@ DoPoke:
 
 	MOVE.L	D0,A0
 	LSR.W	#8,D0
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D0		; 8K pages
+	ELSE
 	LSR.B	#6,D0
+	ENDC
 	LEA	Regs,A3
 	MOVE.L	PagWrite(A3,D0.W*4),D2
 	BEQ.S	NoInitTipos
@@ -756,7 +805,11 @@ CheBuc1:CLR.L	(A0)+
 CheBuc0:
 	MOVE.W	D1,D2
 	LSR.W	#8,D2
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D2		; 8K pages
+	ELSE
 	LSR.B	#6,D2
+	ENDC
 	MOVE.L	D1,A0
 	ADD.L	PagWrite(A3,D2.W*4),A0
 	CMP.B	(A0),D0
@@ -823,7 +876,11 @@ CheatIbuc2:
 CheBuc2:
 	MOVE.W	D1,D2
 	LSR.W	#8,D2
+	IFD	AMG_RAMMIRROR
+	LSR.B	#5,D2		; 8K pages
+	ELSE
 	LSR.B	#6,D2
+	ENDC
 	MOVE.L	D1,A0
 	ADD.L	PagWrite(A3,D2.W*4),A0
 	CMP.B	(A0),D0
@@ -1119,6 +1176,9 @@ NoSaveBatt2:
 	MOVE.L	InsReqBase,A2
 	BSR	ArreglaNom
 
+	IFD	AUTOTEST
+InsertAuto:				; as Insert, with FileNom already filled in
+	ENDC
 
 ;	--------------------
 	TST.L	_XpkBase(PC)		; Mira si es un xpk.
@@ -1292,6 +1352,33 @@ ArrROMPagBuc2:
 	DBF	D1,ArrROMPagBuc2
 	DBF	D0,ArrROMPagBuc0
 
+	IFD	AMG_ANYSIZE
+	MOVE.L	DirCart,A0		; pages past the file mirror the file's own pages
+	ADD.W	#$80,A0
+	MOVE.W	AmgRealPages,D2
+	MOVEQ	#0,D3
+AmgPadBuc:
+	CMP.W	PagCart,D2
+	BCC.S	AmgPadFin
+	MOVE.W	D3,D0
+	MULU	#$4080,D0
+	LEA	(A0,D0.L),A1
+	MOVE.W	D2,D0
+	MULU	#$4080,D0
+	LEA	(A0,D0.L),A2
+	MOVE.W	#($4000/4)-1,D0
+AmgPadCop:
+	MOVE.L	(A1)+,(A2)+
+	DBF	D0,AmgPadCop
+	ADDQ.W	#1,D2
+	ADDQ.W	#1,D3
+	CMP.W	AmgRealPages,D3
+	BCS.S	AmgPadBuc
+	MOVEQ	#0,D3
+	BRA.S	AmgPadBuc
+AmgPadFin:
+	ENDC
+
 ; -=-=-=-
 
 	MOVE.L	#tNomFileCart,MainMenuText12+$C
@@ -1310,7 +1397,11 @@ InCalRom1:
 ; -=-=-=-
 
 	LEA	SRAM,A0
+	IFD	AMG_SRAM2
+	MOVE.W	#((1024*32)/4)-1,D0
+	ELSE
 	MOVE.W	#((1024*16)/4)-1,D0
+	ENDC
 BorraSRAM:CLR.L	(A0)+
 	DBF	D0,BorraSRAM
 
@@ -1376,6 +1467,9 @@ NoLeeBatt:
 MiraTipoCart:
 	MOVE.L	InsReqBase,A0
 	MOVE.L	4(A0),A0
+	IFD	AUTOTEST
+	LEA	FileNom,A0		; no requester: the extension is in FileNom
+	ENDC
 	BSR	BuscaExt
 	TST.L	D0
 	BMI.S	NoCanviEmul
@@ -1501,6 +1595,43 @@ MiTiNom:DS.B	8+64
 
 ; -----------------------------------
 
+	IFD	AMG_ANYSIZE
+; D0 = file size. Any size up to 4 MB: rounded up to 16K pages, then to a power of two of at least
+; two pages, as the bank mask needs; the pages past the file are filled with mirrors after loading.
+; A 512-byte copier header is size MOD 16K = 512. Out: D0 = pages, D1 = -1 (or 0 = refused).
+MiraCartSize:
+	SF	RawCartSize
+	MOVE.L	D0,D1
+	AND.L	#$3FFF,D1
+	CMP.L	#$200,D1
+	BNE.S	AmgSizeHead
+	CMP.L	#$4000,D0
+	BLS.S	AmgSizeHead
+	SUB.L	#$200,D0
+	ST	RawCartSize
+AmgSizeHead:
+	TST.L	D0
+	BEQ.S	AmgSizeBad
+	CMP.L	#$400000,D0
+	BHI.S	AmgSizeBad
+	ADD.L	#$3FFF,D0
+	MOVEQ	#14,D1
+	LSR.L	D1,D0
+	MOVE.W	D0,AmgRealPages
+	MOVEQ	#2,D1
+AmgSizePow:
+	CMP.W	D0,D1
+	BCC.S	AmgSizeOk
+	ADD.W	D1,D1
+	BRA.S	AmgSizePow
+AmgSizeOk:
+	MOVE.L	D1,D0
+	MOVEQ	#-1,D1
+	RTS
+AmgSizeBad:
+	MOVEQ	#0,D1
+	RTS
+	ELSE
 MiraCartSize:
 	SF	RawCartSize
 	BFTST	D0{17:15}		; mira mínimo 32Kb
@@ -1519,6 +1650,7 @@ SiOkCartCon:
 NoOkCartCon:
 	MOVEQ	#0,D1
 	RTS
+	ENDC
 
 ReqCancel:
 	BSR	EnaMouse
@@ -1654,13 +1786,22 @@ LoadFrozenRut1:
 	MOVE.L	#FileNom,D1
 	MOVE.L	#$3ED,D2
 	BSR	OpenFile
+	IFD	AMG_FROZERR
+	BEQ	AmgLFznOpenErr
+	ELSE
 	BEQ	OpenLFrozError
+	ENDC
 
 ;;	MOVE.L	BucFrozen,D3
 	MOVE.L	#SizeFrozen,D3
 	MOVE.L	DirFrozen,D2
 	BSR	ReadFile
-	BEQ.S	NoLFrozError
+	IFD	AMG_FROZERR
+	TST.L	D0
+	BMI	AmgLFznReadErr
+	ELSE
+	NOP			; was BEQ.S NoLFrozError (the next instruction)
+	ENDC
 
 ;;	error cargando.
 NoLFrozError:
@@ -1689,6 +1830,11 @@ LFznBuc:
 	MOVE.W	#($4000/4)-1,D0
 	CMP.L	#"SRAM",(A1)
 	BEQ	FznCopyMem
+	IFD	AMG_SRAM2
+	LEA	SRAM+$4000,A2
+	CMP.L	#"SRM2",(A1)
+	BEQ	FznCopyMem
+	ENDC
 
 	LEA	VRAM,A2
 	MOVE.W	#($4000/4)-1,D0
@@ -1733,6 +1879,15 @@ NoEsfzn:
 	LEA	tErNoFrozen(PC),A0
 	BSR	ImpError
 	BRA.S	FznSalir
+
+	IFD	AMG_FROZERR
+AmgLFznReadErr:
+	BSR	CloseFile
+AmgLFznOpenErr:
+	LEA	tAmgFznLoad(PC),A0
+	BSR	ImpError
+	BRA.S	FznSalir
+	ENDC
 
 FznFin:
 
@@ -1845,7 +2000,11 @@ EsMasSys:
 
 ; ------------------------------------------
 
+	IFD	AMG_SRAM2
+SizeFrozen=$A400+$4400			; room for the SRM2 chunk
+	ELSE
 SizeFrozen=$A400
+	ENDC
 
 	CNOP	0,8
 SaveFrozen:
@@ -1921,6 +2080,14 @@ SaveFrozenRut1:
 	MOVE.W	#($4000/4)-1,D0
 	BSR	CopiaMem4
 	BSR	CanviChunk
+	IFD	AMG_SRAM2
+	MOVE.L	#"SRM2",(A1)+
+	CLR.L	(A1)+
+	LEA	SRAM+$4000,A0		; cartridge RAM bank 1
+	MOVE.W	#($4000/4)-1,D0
+	BSR	CopiaMem4
+	BSR	CanviChunk
+	ENDC
 ; 	--------------------------------------------------
 	MOVE.L	#"VRAM",(A1)+
 	CLR.L	(A1)+
@@ -2007,17 +2174,33 @@ BucFlagDaa:
 	MOVE.L	#FileNom,D1
 	MOVE.L	#$3EE,D2
 	BSR	OpenFile
+	IFD	AMG_FROZERR
+	BEQ	AmgSFznOpenErr
+	ELSE
 	BEQ	OpenSFrozError
+	ENDC
 
 	MOVE.L	BucFrozen,D3
 	MOVE.L	DirFrozen,D2
 	BSR	WriteFile
-	BEQ.S	NoSFrozError
+	IFD	AMG_FROZERR
+	BNE.S	AmgSFznWriteErr
+	ELSE
+	NOP			; was BEQ.S NoSFrozError (the next instruction)
+	ENDC
 
 ;;	error salvando.
 
 NoSFrozError:
 	BSR	CloseFile
+	IFD	AMG_FROZERR
+	BRA.S	OpenSFrozError
+AmgSFznWriteErr:
+	BSR	CloseFile
+AmgSFznOpenErr:
+	LEA	tAmgFznSave(PC),A0
+	BSR	ImpError
+	ENDC
 OpenSFrozError:
 
 
@@ -2069,6 +2252,11 @@ ReadBattRut:
 	MOVE.L	#(16*1024),D3
 	BSR	ReadFile
 	BNE	ReadBattError
+	IFD	AMG_SRAM2
+	MOVE.L	#SRAM+$4000,D2		; bank 1, if the file has it
+	MOVE.L	#(16*1024),D3
+	BSR	ReadFile
+	ENDC
 
 	BSR	CalChecksum
 	MOVE.L	D2,CheckId		; Guarda Check-Sum.
@@ -2107,6 +2295,21 @@ SaveBattRut0:
 	MOVE.L	#(16*1024),D3
 	BSR	WriteFile
 	BNE	ReadBattError
+	IFD	AMG_SRAM2
+	LEA	SRAM+$4000,A0
+	MOVE.W	#($4000/4)-1,D0
+AmgSaveB1Buc:
+	TST.L	(A0)+
+	BNE.S	AmgSaveB1
+	DBF	D0,AmgSaveB1Buc
+	BRA.S	AmgSaveB1No
+AmgSaveB1:
+	MOVE.L	#SRAM+$4000,D2
+	MOVE.L	#(16*1024),D3
+	BSR	WriteFile
+	BNE	ReadBattError
+AmgSaveB1No:
+	ENDC
 
 	BSR	CloseFile
 
@@ -2128,7 +2331,11 @@ ClearBatt:
 	BNE.S	NoClearBatt
 
 	LEA	SRAM,A0
+	IFD	AMG_SRAM2
+	MOVE.W	#($8000/8)-1,D0
+	ELSE
 	MOVE.W	#($4000/8)-1,D0
+	ENDC
 ClrBatBuc:
 	CLR.L	(A0)+
 	CLR.L	(A0)+
@@ -2150,7 +2357,11 @@ NoClearBatt:
 
 CalChecksum:				; Resultado: Check-Sum en D2
 	LEA	SRAM,A0
+	IFD	AMG_SRAM2
+	MOVE.W	#($8000/2)-1,D0
+	ELSE
 	MOVE.W	#($4000/2)-1,D0
+	ENDC
 	MOVEQ	#0,D1
 	MOVEQ	#0,D2
 CaChCaBuc:
@@ -2185,7 +2396,11 @@ JoyPortCon2:
 	MOVE.L	#$8008000F,D0
 	BSR	UpdateTag
 ; ---
+	IFD	AMG_SRAM2
+	BRA	ImpJoyType		; .S is illegal when the CNOP below pads nothing
+	ELSE
 	BRA.S	ImpJoyType
+	ENDC
 
 ; ------------------------------------------
 
@@ -2248,7 +2463,7 @@ SetCountry:
 	MOVEQ	#2,D1			; Nº menu.
 	MOVEQ	#3-1,D4
 
-	BRA.S	PoneOptMenus
+	NOP			; was BRA.S PoneOptMenus (the next instruction)
 
 ; -----------------------------------
 
@@ -2615,14 +2830,22 @@ NOMPREFS:
 	CNOP	0,8
 DirPrefs:
 	DC.B	"AmiMGv05"	; $00 - ID
+	IFD	AMG_JOYDEF		; test: another JoyType byte by default (WinUAE pad runs)
+	DC.B	AMG_JOYDEF
+	ELSE
 	DC.B	$01		; $08 - JoyType (2/1)
+	ENDC
 	DC.B	$FF		; $09 - Black Border
 	DC.B	$00		; $0A - Ask for Reset
 	DC.B	$FF		; $0B - Auto-load Battery
 	DC.B	$00		; $0C - Auto-save Battery
 	DC.B	$FF		; $0D - Ask for Save Battery
 	DC.B	$00		; $0E - Disable Cheats
+	IFD	AMG_NTSC
+	DC.B	$01		; $0F - Screen mode: NTSC (60Hz) by default; most games, and the Game Gear, are 60 Hz
+	ELSE
 	DC.B	$00		; $0F - Screen mode
+	ENDC
 	DC.B	$00		; $10 - GfxRefresh
 	DC.B	$00		; $11 - SprRefresh
 	DC.B	$00		; $12 - Show fps
@@ -2640,7 +2863,11 @@ DirPrefs:
 	DC.B	$00		; $1C - Sprites Priorities
 	DC.B	$00		; $1D - Background Priorities
 	DC.B	$FF		; $1E - Realtime Scroll Refresh
+	IFD	AMG_RASTERPAL
+	DC.B	$FF		; $1F - Realtime Palette Refresh: on (palette changes per line, as GG Aleste II's title)
+	ELSE
 	DC.B	$00		; $1F - Realtime Palette Refresh
+	ENDC
 
 	DC.B	"Cartridges"	; $20
 	DS.B	$100-10
@@ -2944,7 +3171,7 @@ GetFrozen:
 	JSR	-$3C(A6)	; RequestFile.
 
 	TST.L	D0
-	BEQ.S	GetFrozenFin
+	NOP			; was BEQ.S GetFrozenFin (the next instruction)
 
 
 ;	MOVE.L	FroReqBase,A2

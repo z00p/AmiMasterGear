@@ -1,0 +1,8 @@
+build/
+__pycache__/
+*.sms
+*.gg
+*.sav
+*.srm
+*.lha
+tools/vasmm68k_mot.exe
