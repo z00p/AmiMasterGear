@@ -333,12 +333,23 @@ AmgBoxList:				; Centrar: x = (976 - width) / 2, so centred on 488
 	DC.L	MainMenuText5,976
 	DC.L	0,0
 
+	IFD	AMG_V12			; the 1.2 version text
+AmgWTitle:	DC.B	"AmiMasterGear 1.2",0
+AmgSTitle:	DC.B	"AmiMasterGear 1.2.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
+AmgBox0:	DC.B	"AmiMasterGear 1.2",0
+AmgScrTitle:	DC.B	"AmiMasterGear 1.2 Screen.",0
+	ELSE
 AmgWTitle:	DC.B	"AmiMasterGear 1.1",0
 AmgSTitle:	DC.B	"AmiMasterGear 1.1.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
 AmgBox0:	DC.B	"AmiMasterGear 1.1",0
 AmgScrTitle:	DC.B	"AmiMasterGear 1.1 Screen.",0
+	ENDC
 AmgBox3:	DC.B	"and z00p",0
+	IFD	AMG_V12
+AmgAb0:		DC.B	"AmiMasterGear 1.2",0
+	ELSE
 AmgAb0:		DC.B	"AmiMasterGear 1.1",0
+	ENDC
 AmgAb1:		DC.B	"(November 2026)",0
 AmgAb2:		DC.B	"Program and emulation:",0
 AmgAb3:		DC.B	"Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
@@ -567,6 +578,17 @@ AmgPauseEdge:
 .no:	RTS
 AmgPausePrev:	DC.B	$FF
 	CNOP	0,4
+	ENDC
+
+	IFD	AMG_DELPAUSE
+; Del (Pause on the keyboard) gave two NMIs per press. MiraTeclado clears bit 0 of KeyX+3 while
+; Del is down and VDPEmul ANDs KeyX into JoyX, so the bit is clear in both. The NMI check (Main,
+; before SiNMI2) sets KeyX's bit and takes an NMI; the next interrupt finds JoyX's bit still
+; clear, sets it and takes a second. With a joystick, or a CD32 pad under AMG_PAUSEEDGE, nothing
+; rewrites JoyX+3; in Keyboard Only mode LeeTeclado sets it again once a frame, but an interrupt
+; came first (WinUAE runs, Sonic: 2 NMIs per press in all three modes). The one-line change in
+; VDPEmul (Main) keeps bit 0 set in the copy of KeyX that is ANDed into JoyX: Del's Pause lives
+; in KeyX only and the pad's in JoyX only: one NMI per press from either. No code here.
 	ENDC
 
 	IFD	AMG_PADMAP
@@ -1700,6 +1722,12 @@ AmgPsgPlay:
 ; noise: A0 = PSG_Tab+12
 	MOVEQ	#$0F,D1
 	AND.B	2(A0),D1
+	IFD	AMG_NOISELVL
+	BTST	#2,(A0)			; periodic noise: its own volumes (AmgPsgVolP)
+	BNE.S	.nwhite
+	LEA	AmgPsgVolP(PC),A1
+.nwhite:
+	ENDC
 	MOVE.B	(A1,D1.W),D1
 	MOVE.W	D1,$D8(A6)
 	MOVEQ	#7,D2
@@ -1787,6 +1815,14 @@ AmgPsgSave2:	DS.L	5
 AmgPsgK:	DC.W	4096,4059,4134,4096
 AmgPsgKNow:	DC.W	4096
 AmgPsgVol:	DC.B	64,51,40,32,25,20,16,13,10,8,6,5,4,3,3,0
+	IFD	AMG_NOISELVL
+; Periodic noise: the centred pulse (AmgPsgPulse) swings about 5.5 dB less than a tone or white
+; noise at the same Paula volume, where the chip gives all three the same swing (a one-in-sixteen
+; pulse against a square). So its volumes are 5.5 dB (x1.88) up, as far as 64 allows: full
+; correction from attenuation 3, +2 dB at 1 and +4 dB at 2. Jumping Jack'son's kick drum and bass
+; are periodic noise and came out quieter than its snare (white) and its tunes.
+AmgPsgVolP:	DC.B	64,64,64,60,48,38,30,24,19,15,12,10,8,6,5,0
+	ENDC
 AmgPsgLatch:	DC.B	0
 AmgPsgAmiga:	DC.B	0		; 2: an NTSC Amiga (Paula at 3579545)
 AmgPsgReady:	DC.B	0
@@ -1802,4 +1838,250 @@ AmgPsgPulse:	DC.B	127,-9,-9,-9,-9,-9,-9,-9
 		DC.B	-9,-9,-9,-9,-9,-9,-9,-9
 	SECTION	AmgPsgWhiteBuf,BSS_C
 AmgPsgWhite:	DS.B	AMG_PSGWHITE
+	ENDC
+
+	IFD	AMG_M224
+	SECTION	AmgM224,CODE
+
+; The Master System II and Game Gear VDP's 224-line picture (Mode 4 with M2 and M1 set, M3 clear:
+; register 0 bits 2 and 1, register 1 bit 4). Micro Machines (Master System and Game Gear) and
+; Micro Machines 2 (Game Gear) race in it. v0.8 drew every Mode 4 picture 192 lines high, as the
+; first Master System's VDP does. With 224 lines the VDP
+;  - shows 224 lines, and the frame interrupt comes after line 224 instead of 192 (the line
+;    counter counts down on lines 0-224, as on 0-192);
+;  - takes the name table from register 2 bits 3-2 only, at $0700, $1700, $2700 or $3700;
+;  - has 32 rows in it (256 lines) instead of 28, so the vertical scroll wraps at 256, not 224;
+;  - treats a sprite Y of $D0 as an ordinary position: it no longer ends the sprite table, and
+;    sprites from Y = $E0 up are above the top.
+; (Charles MacDonald, Sega Master System VDP documentation, 2002: registers 0-2, vertical scroll,
+; sprites, display timing, interrupts. Checked against Mesen 2.)
+;
+; The height is chosen from the registers at each frame's start (AmgM224Frame, from MiraInterFin);
+; when it changes, AmgM224Set sets every place that depends on it: v0.8's line jump table, the
+; copper list (the 224-line picture starts 32 Amiga lines higher, so its bottom stays at v0.8's),
+; the Amiga sprites' first line, and the values read by the hooks in Main (rows, lines, wraps).
+; The background buffers already hold 256 lines and v0.8's records of the name table 32 rows.
+; The Game Gear's LCD shows the middle 144 lines: 24-167 of 192, 40-183 of 224.
+; Cost per frame: one test. The change itself redraws the whole background.
+
+AmgM224Frame:
+	MOVEQ	#0,D0
+	MOVE.B	VDPRegs+0,D1
+	AND.B	#$06,D1			; M4 and M2
+	CMP.B	#$06,D1
+	BNE.S	.got
+	MOVE.B	VDPRegs+1,D1
+	AND.B	#$18,D1			; M1 without M3 (M3 alone is the 240-line PAL picture: not done)
+	CMP.B	#$10,D1
+	BNE.S	.got
+	MOVEQ	#1,D0
+.got:	TST.B	AmgM224Force
+	BNE.S	AmgM224Set
+	CMP.B	AmgM224On,D0
+	BNE.S	AmgM224Set
+	RTS
+
+; D0.B = 0 for 192 lines, 1 for 224. D1-D2/A0-A1 used.
+AmgM224Set:
+	SF	AmgM224Force
+	MOVE.B	D0,AmgM224On
+	LEA	AmgM224P192,A0
+	TST.B	D0
+	BEQ.S	.p
+	LEA	AmgM224P224,A0
+.p:	LEA	AmgM224Vars,A1
+	MOVEQ	#(AmgM224PLen/2)-1,D1
+.cp:	MOVE.W	(A0)+,(A1)+
+	DBF	D1,.cp
+
+; v0.8's line table from line 192 to 254 (MiraInter: one entry for each line as it starts)
+	LEA	JumpCurLine+(192*4),A0
+	TST.B	D0
+	BNE.S	.j224
+	MOVE.L	#MiraInter192,(A0)+	; frame interrupt
+	MOVE.L	#MiraInter193,(A0)+	; the frame drawn
+	MOVEQ	#(224-194)-1,D1
+.j1:	MOVE.L	#MiraInterBuc2,(A0)+
+	DBF	D1,.j1
+	MOVEQ	#(255-224)-1,D1
+.j2:	MOVE.L	#MiraInterBuc3,(A0)+
+	DBF	D1,.j2
+	BRA.S	.jok
+.j224:	MOVEQ	#(224-192)-1,D1
+.j3:	MOVE.L	#MiraInterBuc,(A0)+	; lines 192-223 are shown
+	DBF	D1,.j3
+	MOVE.L	#MiraInter192,(A0)+	; line 224: frame interrupt
+	MOVE.L	#MiraInter193,(A0)+	; line 225: the frame drawn
+	MOVEQ	#(255-226)-1,D1
+.j4:	MOVE.L	#MiraInterBuc2,(A0)+
+	DBF	D1,.j4
+.jok:
+
+; the copper list's header: show-fps strip, colours and the jump to the line list, before the picture
+	MOVE.W	AmgTop,D1		; the picture's first Amiga line: $3B or $1B
+	MOVE.W	D1,D2
+	SUB.W	#$0A,D2
+	LSL.W	#8,D2
+	MOVE.B	#$A1,D2
+	MOVE.W	D2,Plano1+18		; show-fps strip's window: $31A1 or $11A1
+	MOVE.B	#$01,D2
+	MOVE.W	D2,Plano1+32		; its wait
+	ADD.W	#$0800,D2
+	MOVE.W	D2,BkBor+12		; its end: $3901 or $1901
+	ADD.W	#$0100,D2
+	MOVE.W	D2,Color0-4		; colours: $3A01 or $1A01
+	MOVE.B	#$B1,D2
+	MOVE.W	D2,CopperLineJmp-4	; into the line list: $3AB1 or $1AB1
+	MOVE.W	AmgDiwTop,Bordes+2
+	TST.B	Regs+Consola
+	BEQ.S	.ms
+	ADD.W	AmgGgLine,D1		; Game Gear: the LCD's window
+	LSL.W	#8,D1
+	MOVE.B	#$D1,D1
+	MOVE.W	D1,Bordes+2
+	ADD.W	#$9000,D1		; 144 lines
+	MOVE.B	#$71,D1
+	MOVE.W	D1,Bordes+6
+.ms:
+
+; the line list (both copies): each slot waits at the end of the line before its picture line
+	LEA	CopperLine0+(192*CoppLineSize),A0
+	LEA	CopperLine1+(192*CoppLineSize),A1
+	MOVEQ	#(224-192)-1,D1
+	TST.B	D0
+	BNE.S	.s224
+.s192:	MOVE.L	#$00FC0000,D2		; lines 192-223: nothing, as v0.8's spare slots
+	MOVE.L	D2,(A0)+
+	MOVE.L	D2,(A0)+
+	MOVE.L	D2,(A0)+
+	MOVE.L	D2,(A0)+
+	MOVE.L	D2,(A1)+
+	MOVE.L	D2,(A1)+
+	MOVE.L	D2,(A1)+
+	MOVE.L	D2,(A1)+
+	DBF	D1,.s192
+	BRA.S	.sok
+.s224:	MOVE.L	#CopperRet,D2		; as CreaCoppLine's: back to the line list
+	MOVE.W	#$0086,8(A0)
+	MOVE.W	#$0086,8(A1)
+	MOVE.W	D2,10(A0)
+	MOVE.W	D2,10(A1)
+	SWAP	D2
+	MOVE.W	#$0084,4(A0)
+	MOVE.W	#$0084,4(A1)
+	MOVE.W	D2,6(A0)
+	MOVE.W	D2,6(A1)
+	MOVE.L	#$00FE0000,D2
+	MOVE.L	D2,12(A0)
+	MOVE.L	D2,12(A1)
+	ADD.W	#CoppLineSize,A0
+	ADD.W	#CoppLineSize,A1
+	DBF	D1,.s224
+.sok:	MOVE.W	AmgTop,D1
+	SUBQ.W	#1,D1
+	LSL.W	#8,D1
+	MOVE.B	#$C1,D1
+	SWAP	D1
+	MOVE.W	#$FFFE,D1
+	LEA	CopperLine0,A0
+	LEA	CopperLine1,A1
+	MOVE.W	AmgLinesM1,D2
+.wt:	MOVE.L	D1,(A0)
+	MOVE.L	D1,(A1)
+	ADD.W	#CoppLineSize,A0
+	ADD.W	#CoppLineSize,A1
+	ADD.L	#$01000000,D1
+	DBF	D2,.wt
+
+; the Amiga sprites (256 lines each) start on the picture's first line
+	MOVE.B	AmgTop+1,D1
+	LEA	Sprit0,A0
+	MOVEQ	#8-1,D2
+.spr:	MOVE.B	D1,(A0)			; first line
+	MOVE.B	D1,8(A0)		; last (with bit 8 set)
+	ADD.W	#NexSpr,A0
+	DBF	D2,.spr
+
+; flags left by another height's lines past the last one
+	LEA	TabRasCMDS+192,A0
+	MOVEQ	#(260-192)-1,D1
+.cmd:	CLR.B	(A0)+
+	DBF	D1,.cmd
+
+; the whole background drawn again: second-palette plane and its record cleared, every cell of
+; v0.8's record of the name table made to differ from VRAM (all 32 rows)
+	LEA	Plano5,A0
+	MOVE.W	#256-1,D1
+.p5:	REPT	16
+	CLR.L	(A0)+
+	ENDR
+	ADD.W	#256-64,A0
+	DBF	D1,.p5
+	LEA	Pant32,A0
+	MOVE.W	#(32*32*2/4)-1,D1
+.p32:	CLR.L	(A0)+
+	DBF	D1,.p32
+	MOVEQ	#0,D1
+	MOVE.B	VDPRegs+2,D1
+	AND.W	AmgNtMask,D1
+	LSL.W	#8,D1
+	LSL.W	#2,D1
+	ADD.W	AmgNtAdd,D1
+	LEA	VRAM,A0
+	ADD.L	D1,A0
+	LEA	PantAnt,A1
+	MOVE.W	#(32*32)-1,D1
+.inv:	MOVE.W	(A0)+,D2
+	NOT.W	D2
+	MOVE.W	D2,(A1)+
+	DBF	D1,.inv
+	RTS
+
+	SECTION	AmgM224Data,DATA
+; What the hooks in Main read, for the height in use (192 lines to start with, as v0.8)
+AmgM224Vars:
+AmgRowsM1:	DC.W	28-1		; name table rows drawn, less 1
+AmgLinesM1:	DC.W	192-1		; picture lines, less 1
+AmgWrapLine:	DC.W	$E0		; less the vertical scroll (byte): the line where the background wraps
+AmgWrapCmp:	DC.W	$E0		; background buffer lines
+AmgSprLim:	DC.W	$C0+16		; sprite Y + 16 below this is drawn
+AmgGgLine:	DC.W	24		; the Game Gear LCD's first line
+AmgDiwTop:	DC.W	$3BA1		; Master System display window start
+AmgNtMask:	DC.W	$0E		; register 2 bits for the name table
+AmgNtAdd:	DC.W	0		; added to the name table address
+AmgTop:		DC.W	$3B		; the Amiga line of picture line 0
+AmgMaskEnd:	DC.L	PantGfxMask+(15*36)+(28*8*36)	; background priority mask's end
+AmgWrapAdd:	DC.B	$20		; added (byte) past the buffer's end
+		DC.B	0
+AmgM224PLen	EQU	*-AmgM224Vars
+
+AmgM224P192:	DC.W	28-1,192-1,$E0,$E0,$C0+16,24,$3BA1,$0E,0,$3B
+		DC.L	PantGfxMask+(15*36)+(28*8*36)
+		DC.B	$20,0
+AmgM224P224:	DC.W	32-1,224-1,$00,$100,$E0+16,40,$1BA1,$0C,$0700,$1B
+		DC.L	PantGfxMask+(15*36)+(32*8*36)
+		DC.B	$00,0
+AmgM224On:	DC.B	0		; 1: 224 lines
+AmgM224Force:	DC.B	0		; set: AmgM224Set at the next frame whatever the height
+	CNOP	0,4
+	ENDC
+
+	IFD	AMG_OLDPREFS
+	SECTION	AmgOldPrefs,CODE
+; After LoadPrefs has copied S:AmiMasterGear.prefs into DirPrefs. 0.8 and 1.1 save the same
+; file ("AmiMGv05") with "Sprites Priorities" ($1C) and "Background Priorities" ($1D) off by
+; default, the two options 1.2 turns on (grey cars, Defenders of Oasis' boxes). 1.2 writes
+; "AmiMGv12" into the free bytes at $1F8, which 0.8 and 1.1 load and save without looking at.
+; A file without it (0.8, 1.1, or a v04 file) gets both options on and the marker, so the next
+; Save Prefs keeps them; everything else stays as saved. A file with it keeps the user's choice.
+AmgOldPrefs:
+	CMP.L	#"AmiM",BufPrefs+$1F8
+	BNE.S	.old
+	CMP.L	#"Gv12",BufPrefs+$1FC
+	BEQ.S	.new
+.old:	ST	DirPrefs+$1C
+	ST	DirPrefs+$1D
+	MOVE.L	#"AmiM",DirPrefs+$1F8
+	MOVE.L	#"Gv12",DirPrefs+$1FC
+.new:	RTS
 	ENDC

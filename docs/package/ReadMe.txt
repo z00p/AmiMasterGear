@@ -6,9 +6,7 @@ assembly, by Juan Antonio Gomez Galvez and z00p.
 
 Juan began AmiMasterGear in 1997 and made it freeware. In 2026 he gave
 his sources (version 0.8) to the community. This community version,
-@VERSION@, is built from them and published with his permission. It is
-a PRE-RELEASE: some of the changes have so far been tried only in an
-emulator (see "Not yet tried" below).
+@VERSION@, is built from them and published with his permission.
 
 While a game runs, AmiMasterGear takes over the machine. Esc goes back
 to the menu.
@@ -24,8 +22,10 @@ Requirements
   later. Without a 68020 or AGA the program says "MC68020+ and AGA
   required!".
 - A 68020 or better. Tested on an A1200 with a PiStorm and in WinUAE.
-  The speed on a 68030 at 50 MHz has not been measured for this
-  version yet.
+  A 68030/50 runs every game we measured at full speed, NTSC and PAL,
+  with room to spare (Micro Machines, the slowest: 128% of full speed
+  on NTSC, 156% on PAL). Measured in WinUAE set up to match a real
+  Blizzard 030/50, not on a real 030.
 - asl.library (part of AmigaOS).
 
 
@@ -63,6 +63,10 @@ A .sms file runs as a Master System, a .gg file as a Game Gear.
 The screen is NTSC (60 Hz) by default, as most games and the Game Gear
 are. PAL (50 Hz) is the other Screen choice in the menu.
 
+Games that switch to the taller 224-line picture of the Master System
+II and Game Gear (Micro Machines, Micro Machines 2) get it: the picture
+grows upwards, its bottom edge stays where the usual 192 lines end.
+
 
 Keyboard
 --------
@@ -80,9 +84,12 @@ Joysticks and pads
 ------------------
 Joy-Control in the menu sets how each pad is read. The top button,
 Port 2, is the joystick port (player 1); Port 1 is the mouse port
-(player 2: Master System only, with JoyStick 2 ON in the Options
-menu). Without a prefs file Port 2 is set to Keyboard Only: pick the
-type of your joystick or pad, then Save Prefs to keep it.
+(player 2, Master System only). A CD32 pad in Port 1: set Port 1 to
+CD32 Joypad (or KTRL CD32+) and player 2 is on. A joystick in Port 1:
+set it to Amiga JoyStick and tick JoyStick 2 ON in the Options menu.
+Without a prefs file Port 2 is set to CD32 Joypad. With a
+joystick, pick Amiga JoyStick (on CD32 Joypad a plain joystick moves
+but does not fire), then Save Prefs to keep it.
 
   Amiga JoyStick   directions, fire = button 1, second fire =
                    button 2. Pause and Start from the keyboard.
@@ -140,42 +147,53 @@ choices (frame skip), Speed, V.Lines, Country Code, Black Border, the
 cheat mode (Do Poke and Find Poke), Save Graphics, and XPK packing for
 saves. Realtime Palette Refresh (Options, Video Emulation) is on by
 default in @VERSION@: games that change colours partway down the screen
-show it (the GG Aleste II title).
+show it (the GG Aleste II title). Sprites Priorities (Options, Video
+Emulation) is on by default from 1.2: where sprites overlap, the one the
+console shows wins, so the cars and boats in Micro Machines have their
+colours. Turning it off draws a little faster but mixes the colours of
+overlapping sprites. Background Priorities (same menu) is on by default
+from 1.2 too: background marked "in front" covers the sprites, as on the
+console (Defenders of Oasis' dialogue boxes). Upgrading: prefs saved by
+0.8 or 1.1 get both options switched on when loaded (the rest is kept);
+Save Prefs keeps them. Prefs saved by 1.2 keep your choice.
 
 
 Not supported
 -------------
 - The FM sound unit (YM2413).
-- The Master System II's 224-line picture mode: Micro Machines shows
-  its race as a first Master System does. It comes in the next version.
+- The 240-line picture of the PAL Master System II (no game we tested
+  uses it).
 - Light gun, paddle, 3-D glasses, the Game Gear link cable.
 - Cartridges over 4 MB.
 
 
-Not yet tried
--------------
-These changes have been tried in WinUAE but not yet on a real Amiga:
-the new sound chip emulation, Pause from the Del key, battery saves,
-frozen games, Black Sea Treasure Hunters, PlayStation pads on a CD32
-adapter, and the speed on a 68030/50. Reports are welcome (see below).
+Tried on real hardware
+----------------------
+On an A1200 with a PiStorm, AGA screen, sound from Paula: the 224-line
+picture (Micro Machines on the Master System and Game Gear, Micro
+Machines 2 on the Game Gear, NTSC and PAL), the sprite colours and the
+background priority (Micro Machines, Defenders of Oasis, Sonic, Shinobi,
+Wonder Boy III), Alex Kidd, Columns, GG Aleste II, the Help page, Pause
+from the Del key, battery saves (Shining Force, Defenders of Oasis),
+frozen games, Black Sea Treasure Hunters, CD32 pads in both ports (a
+KTRL CD32 and a PlayStation pad on a CD32 adapter, with PadTest), the
+drums in Jumping Jack'son, and prefs from 1.1 getting both priority
+options switched on. Not tried on hardware: the Port 2 default without
+a prefs file (WinUAE only).
+No real 68030 was to hand: its speed is the WinUAE measurement only.
 
 
 Known differences
 -----------------
-- Micro Machines (Master System): the race picture differs from the
-  console's (the 224-line mode, see above).
-- Ax Battler (Game Gear): the intro's text sits in a different place.
-- Wing Warriors (Master System): its menu differs from other emulators,
-  probably because of the region the console reports.
 - Sprite collisions in the Master System's own picture mode are still
   reported as version 0.8 did (a flag that changes on each read), not
   from the sprites.
-- The Help page still shows version 0.8's CD32 pad buttons; the layout
-  above is the one @VERSION@ uses.
-- In emulator test runs a game now and then started on a black screen
-  (a different game each time, never the first after start-up). Not
-  reproduced on demand; cause not yet found. If it happens, please
-  report the game and what ran before it.
+- An occasional one-frame black flicker during play, seen on an A1200
+  (Micro Machines). Cause not yet found.
+- Rhythm sounds made from the noise channel can sound rough next to the
+  console (heard in Jumping Jack'son's music). Being looked into.
+- A thin line can show at the left edge of the picture on bright screens
+  on real AGA (also in 1.1).
 
 
 Credits

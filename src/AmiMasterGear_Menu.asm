@@ -440,6 +440,11 @@ NoHayAsl:
 ; <=-----------------------=>
 BucleMenu:
 	IFD	AUTOTEST
+	IFD	AUTOHELP
+	MOVEQ	#1,D0			; test builds: the PC grabs the menu, then the help page
+	JSR	AutoGrab
+	BSR	HelpPage
+	ENDC
 	BSR	DisMouse
 	BSR	InsertAuto
 	TST.L	BucCart
@@ -449,6 +454,12 @@ BucleMenu:
 	LEA	AutoStartText,A0
 	JSR	AutoPuts
 	BSR	PowerON
+	IFD	AUTOCYCLE
+	JSR	AutoNextRom		; test builds: the next cartridge on the command line, Insert + Power ON again
+	BEQ.S	.noCart
+	BSR	EnaMouse
+	BRA	BucleMenu
+	ENDC
 .noCart:
 	LEA	AutoEndText,A0
 	JSR	AutoPuts
@@ -565,8 +576,13 @@ HelpPage:
 	MOVE.L	#GBJoypad,DirJoyTypePic
 	BSR	ImprHelpJoy
 
+	IFD	AUTOHELP
+	MOVEQ	#2,D0			; test builds: the PC grabs the help page
+	JSR	AutoGrab
+	ELSE
 	LEA	HelpPagePunts,A1
 	BSR	Control
+	ENDC
 
 	BSR	CloseHelpPageWindow
 	BSR	EnaMouse
@@ -2785,6 +2801,9 @@ PREFSOK:
 COPIPREFS:
 	MOVE.B	(A0)+,(A1)+
 	DBF	D0,COPIPREFS
+	IFD	AMG_OLDPREFS
+	JSR	AmgOldPrefs		; prefs from 0.8 or 1.1: both priority options on (Amg10.asm)
+	ENDC
 	RTS
 
 	CNOP	0,4
@@ -2795,6 +2814,9 @@ PREFSv04:
 COPIPREFSv04:
 	MOVE.B	(A0)+,(A1)+
 	DBF	D0,COPIPREFSv04
+	IFD	AMG_OLDPREFS
+	JSR	AmgOldPrefs		; prefs from 0.8 or 1.1: both priority options on (Amg10.asm)
+	ENDC
 	RTS
 
 ; ------------------------------------------
@@ -2833,7 +2855,11 @@ DirPrefs:
 	IFD	AMG_JOYDEF		; test: another JoyType byte by default (WinUAE pad runs)
 	DC.B	AMG_JOYDEF
 	ELSE
+	IFD	AMG_PADDEF
+	DC.B	$02		; $08 - JoyType (2/1): Port 2 starts on CD32 Joypad (v0.8: Keyboard Only)
+	ELSE
 	DC.B	$01		; $08 - JoyType (2/1)
+	ENDC
 	ENDC
 	DC.B	$FF		; $09 - Black Border
 	DC.B	$00		; $0A - Ask for Reset
@@ -2860,8 +2886,16 @@ DirPrefs:
 
 	DC.B	$00		; $1B - Modo AntiCrack 2.
 
+	IFD	AMG_SPRPRI
+	DC.B	$FF		; $1C - Sprites Priorities: on by default, as the console draws them (v0.8: off)
+	ELSE
 	DC.B	$00		; $1C - Sprites Priorities
+	ENDC
+	IFD	AMG_BGPRI
+	DC.B	$FF		; $1D - Background Priorities: on by default, so tiles with the priority bit cover sprites (v0.8: off)
+	ELSE
 	DC.B	$00		; $1D - Background Priorities
+	ENDC
 	DC.B	$FF		; $1E - Realtime Scroll Refresh
 	IFD	AMG_RASTERPAL
 	DC.B	$FF		; $1F - Realtime Palette Refresh: on (palette changes per line, as GG Aleste II's title)
@@ -2877,7 +2911,13 @@ DirPrefs:
 
 	DC.W	$00		; $128 - VLines
 
+	IFD	AMG_OLDPREFS
+	DS.B	$1F8-$12A		; free
+	DC.B	"AmiMGv12"	; $1F8 - saved by 1.2 or later (0.8 and 1.1 leave these bytes alone)
+	DS.B	2
+	ELSE
 	DS.B	$200-$128	; $128=>$1FF	; Libres.
+	ENDC
 
 	DC.B	"Frozen"	; $200
 	DS.B	$100-6

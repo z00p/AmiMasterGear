@@ -1365,10 +1365,17 @@ HelpPageText0:
     DC.L    HelpPageText1
 
 HelpPageText1:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    84,19
+    ELSE
     DC.B    2,0
     DC.B    $00
     DC.B    0
     DC.W    84,19
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText1
     DC.L    HelpPageText2
@@ -1419,37 +1426,65 @@ HelpPageText6:
     DC.L    HelpPageText7
 
 HelpPageText7:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    324,19
+    ELSE
     DC.B    2,0
     DC.B    $00
     DC.B    0
     DC.W    316,19
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText7
     DC.L    HelpPageText8
 
 HelpPageText8:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    316,29
+    ELSE
     DC.B    6,0
     DC.B    $00
     DC.B    0
     DC.W    308,29
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText8
     DC.L    HelpPageText9
 
 HelpPageText9:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    308,39
+    ELSE
     DC.B    6,0
     DC.B    $00
     DC.B    0
     DC.W    300,39
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText9
     DC.L    HelpPageText10
 
 HelpPageText10:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $01
+    DC.B    0
+    DC.W    300,49
+    ELSE
     DC.B    6,0
     DC.B    $01
     DC.B    0
     DC.W    324,49
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText10
     DC.L    HelpPageText11
@@ -1464,19 +1499,33 @@ HelpPageText11:
     DC.L    HelpPageText12
 
 HelpPageText12:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    276,69
+    ELSE
     DC.B    6,0
     DC.B    $00
     DC.B    0
     DC.W    300,69
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText12
     DC.L    HelpPageText13
 
 HelpPageText13:
+    IFD    AMG_HELP
+    DC.B    4,0
+    DC.B    $00
+    DC.B    0
+    DC.W    316,79
+    ELSE
     DC.B    6,0
     DC.B    $00
     DC.B    0
     DC.W    292,79
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText13
     DC.L    HelpPageText14
@@ -1545,19 +1594,33 @@ HelpPageText20:
     DC.L    HelpPageText21
 
 HelpPageText21:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    308,122
+    ELSE
     DC.B    6,0
     DC.B    $00
     DC.B    0
     DC.W    316,122
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText21
     DC.L    HelpPageText22
 
 HelpPageText22:
+    IFD    AMG_HELP
+    DC.B    6,0
+    DC.B    $00
+    DC.B    0
+    DC.W    308,132
+    ELSE
     DC.B    6,0
     DC.B    $00
     DC.B    0
     DC.W    316,132
+    ENDC
     DC.L    topaz8
     DC.L    HelpPageIText22
     DC.L    0
@@ -1850,61 +1913,125 @@ HelpPageIText3:
     DC.B    'Enter = Start  (GG)',0
 
 HelpPageIText4:
+    IFD    AMG_HELP
+    DC.B    'Left Alt = Button 1',0
+    ELSE
     DC.B    'Left Alt = B Button',0
+    ENDC
 
 HelpPageIText5:
+    IFD    AMG_HELP
+    DC.B    'Left Amiga = Button 2',0
+    ELSE
     DC.B    'Left Amiga = A Button',0
+    ENDC
 
 HelpPageIText6:
     DC.B    ' CD32 Joypad ',0
 
 HelpPageIText7:
+    IFD    AMG_HELP
+    DC.B    'Red = Button 1',0
+    ELSE
     DC.B    'Play = Exit to menu',0
+    ENDC
 
 HelpPageIText8:
+    IFD    AMG_HELP
+    DC.B    'Blue = Button 2',0
+    ELSE
     DC.B    'Green = Pause  (MS)',0
+    ENDC
 
 HelpPageIText9:
+    IFD    AMG_HELP
+    DC.B    'Green = Pause  (MS)',0
+    ELSE
     DC.B    'Yellow = Start  (GG)',0
+    ENDC
 
 HelpPageIText10:
+    IFD    AMG_HELP
+    DC.B    'Yellow = Start  (GG)',0
+    ELSE
     DC.B    'Red = B Button',0
+    ENDC
 
 HelpPageIText11:
+    IFD    AMG_HELP
+    DC.B    'Play = Pause+Start',0
+    ELSE
     DC.B    'Blue = A Button',0
+    ENDC
 
 HelpPageIText12:
+    IFD    AMG_HELP
+    DC.B    'Shoulders = Exit to menu',0
+    ELSE
     DC.B    'Reward = B Button',0
+    ENDC
 
 HelpPageIText13:
+    IFD    AMG_HELP
+    DC.B    '(either port)',0
+    ELSE
     DC.B    'Forward = A Button',0
+    ENDC
 
 HelpPageIText14:
+    IFD    AMG_HELP
+    DC.B    'Space Bar = Button 1',0
+    ELSE
     DC.B    'Space Bar = B Button',0
+    ENDC
 
 HelpPageIText15:
+    IFD    AMG_HELP
+    DC.B    'Left Shift = Button 2',0
+    ELSE
     DC.B    'Left Shift = A Button',0
+    ENDC
 
 HelpPageIText16:
     DC.B    ' Amiga Joystick ',0
 
 HelpPageIText17:
+    IFD    AMG_HELP
+    DC.B    'Fire = Button 1',0
+    ELSE
     DC.B    'Fire = A Button',0
+    ENDC
 
 HelpPageIText18:
     DC.B    '(Keyboard is always active)',0
 
 HelpPageIText19:
+    IFD    AMG_HELP
+    DC.B    ' KTRL CD32+ ',0
+    ELSE
     DC.B    ' Standard Joypad ',0
+    ENDC
 
 HelpPageIText20:
+    IFD    AMG_HELP
+    DC.B    'As CD32 Joypad, but',0
+    ELSE
     DC.B    'Fire #1 = A Button',0
+    ENDC
 
 HelpPageIText21:
+    IFD    AMG_HELP
+    DC.B    'Forward = Pause+Start',0
+    ELSE
     DC.B    'Fire #2 = B Button',0
+    ENDC
 
 HelpPageIText22:
+    IFD    AMG_HELP
+    DC.B    'Reverse = Exit',0
+    ELSE
     DC.B    'Fire #3 = Start (GG)',0
+    ENDC
 
     CNOP    0,2
 

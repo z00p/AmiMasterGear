@@ -1,9 +1,52 @@
 # Changes from Juan's v0.8
 
-AmiMasterGear 1.1 is built from the sources of AmiMasterGear v0.8 (12 December 1999) by Juan
+AmiMasterGear 1.2 is built from the sources of AmiMasterGear v0.8 (12 December 1999) by Juan
 Antonio Gómez Gálvez. This file lists what changed for the user, grouped. Every change sits
 behind its own assembler switch (`AMG_` names in `src/Amg10.asm`); without them the source
 builds Juan's v0.8 byte for byte.
+
+## 1.2 (25 November 2026)
+
+### Picture
+- The Master System II and Game Gear's 224-line picture (Mode 4 with M1 and M2 set) is shown:
+  224 lines, the name table at $x700 with 32 rows, the vertical scroll wrapping at 256, sprites
+  down to line 224 with no $D0 end marker, and the frame interrupt after line 224. Micro
+  Machines (Master System and Game Gear) and Micro Machines 2 (Game Gear) race in it; in 1.1
+  their track wrapped. The tall picture starts 32 lines higher on the Amiga screen, so its
+  bottom edge, and every 192-line game, stay where they were. PAL and NTSC.
+- Overlapping sprites are drawn as the console draws them: where two overlap, the one earlier
+  in the sprite table shows. v0.8 and 1.1 mixed the two sprites' colour numbers, so the cars
+  and boats in Micro Machines (Master System and Game Gear) came out grey; they now have their
+  colours. This is v0.8's own "Sprites Priorities" (Options,
+  Video Emulation), now on by default.
+- Background tiles marked "in front of sprites" now cover the sprites, as on the console:
+  Defenders of Oasis' dialogue boxes no longer have townspeople or pictures drawn over their
+  text, and its title menu's highlighted line is readable. This is v0.8's own "Background
+  Priorities" (Options, Video Emulation), now on by default.
+- A prefs file saved by 0.8 or 1.1 gets both priority options switched on when it is loaded;
+  everything else in it is kept. 1.2 marks the files it saves (in bytes 0.8 and 1.1 leave
+  alone, so they still load them), and a 1.2 file keeps the user's choice, off included.
+
+### Pads and keyboard
+- Without a prefs file Port 2 starts on CD32 Joypad (1.1: Keyboard Only). Saved prefs still
+  win; the keyboard works in every mode.
+- Del gives one Pause per press. 1.1 gave two, whatever the Joy-Control setting: the game
+  paused and carried straight on.
+- Player 2: setting Joy-Control's Port 1 to CD32 Joypad or KTRL CD32+ turns player 2 on (Master
+  System). In 1.1 port 1 was read only with "JoyStick 2 ON" ticked in the Options menu, so a
+  CD32 pad in port 1 did nothing. With Amiga JoyStick or Keyboard Only on port 1, "JoyStick 2
+  ON" is still needed (the mouse lives in port 1).
+
+### Sound
+- Periodic noise (the kick drum and bass in many homebrew games, such as Jumping Jack'son) is
+  about 5.5 dB louder, back in balance with the tunes and the white noise as on the console
+  (fully from the chip's third volume step down; the two loudest steps as far as Paula allows).
+
+### Menu
+- The Help page shows the CD32 buttons as they are since 1.1 (red = 1, blue = 2, green =
+  Pause, yellow = Start, Play = Pause and Start, shoulders = back to the menu; KTRL CD32+:
+  forward = Pause and Start, reverse = back to the menu) and the keyboard's buttons.
+- Titles say "AmiMasterGear 1.2".
 
 ## 1.1 (pre-release, 23 November 2026)
 

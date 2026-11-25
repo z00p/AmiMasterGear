@@ -37,7 +37,11 @@ ColorDebug=1
 
 	BRA.S	Vamos
 	IFD	AMG_TITLES
+	IFD	AMG_V12
+	DC.B	"$VER: AmiMasterGear 1.2 (25.11.2026)",0,0
+	ELSE
 	DC.B	"$VER: AmiMasterGear 1.1 (23.11.2026)",0,0
+	ENDC
 	ELSE
 	DC.B	"$VER:AmiMasterGear Emulator v0.8 (12.12.99)",0,0
 	ENDC
@@ -67,6 +71,11 @@ EsContinuar:
 
 	MOVE.L	#LeeNoJoy2,JoyControlRut2
 	TST.B	DirPrefs+$15		; ¿Emular Joy 2?
+	IFD	AMG_P2PAD
+	BNE.S	AmgP2On
+	BTST	#5,$08(A5)		; or Joy-Control Port 1 set to a CD32 pad (CD32 Joypad or KTRL CD32+)
+AmgP2On:
+	ENDC
 	BEQ.S	EsJoyGameGear
 	TST.B	DirPrefs+$16		; ¿Es Game Gear? entonces 1 solo Joy.
 	BNE.S	EsJoyGameGear
@@ -101,6 +110,9 @@ EsMastSys:
 	SWAP	D0
 	MOVE.W	D0,Bordes+2
 ;;	MOVE.L	D1,DiPaSp+4
+	IFD	AMG_M224
+	ST	AmgM224Force		; the display is set for 192 or 224 lines at the next frame
+	ENDC
 ; ---------------------------------------<=
 
 ; ---------------------------------------=> Clear Caches.
@@ -5036,7 +5048,13 @@ MiraInterFin:
 	MOVEM.L	D0-D7/A0-A7,Bufer(A3)
 	LEA	BufBasura(PC),A7
 ;	---
+	IFD	AUTOBLANK
+	JSR	AutoBlankCount		; test builds: frames that start with the display off
+	ENDC
 	BSR	PonePaletaMS
+	IFD	AMG_M224
+	JSR	AmgM224Frame		; 192 or 224 lines, from the registers at the frame's start
+	ENDC
 ;	---
 	LEA	Regs(PC),A3
 	MOVEM.L	Bufer(A3),D0-D7/A0-A7
@@ -5227,6 +5245,9 @@ NoModoHalt:
 	BSET	#0,JoyX+3(A3)
 	BNE.S	NoNMI2
 SiNMI2:
+	IFD	AUTODEL
+	ADDQ.L	#1,AutoNmis		; test builds: Pause NMIs
+	ENDC
 	LEA	$66(A4),A5
 NoNMI2:
 	Otra2				; Interrumpiendo...
@@ -5590,6 +5611,12 @@ fps60NoDes:
 
 ; ---------------------------------------=> Lectura de JoySticks
 	JSR	([JoyControlRut.w,PC])
+	IFD	AUTODEL
+	JSR	AutoDelKey		; test builds: Del pressed and released as MiraTeclado does
+	ENDC
+	IFD	AUTOSCR
+	ADDQ.L	#1,AutoCopers		; test builds: copper interrupts taken
+	ENDC
 	JSR	MiraTeclado
 	JSR	([JoyControlRut2.w,PC])
 
@@ -5608,6 +5635,9 @@ LogicalX:
 LogicalY:
 AllMoves:
 ; -----------------------------------<=
+	IFD	AMG_DELPAUSE
+	BSET	#0,D1			; Del's Pause stays in KeyX: one NMI per press (Amg10.asm)
+	ENDC
 	AND.L	D1,JoyX(A3)
 ; -----------------------------------<=
 
@@ -5668,7 +5698,11 @@ RGBCont:
 ; ----------------------------------<=
 
 ; ----------------------------------=> Pone datos de posible desbordamiento de BG.
+	IFD	AMG_M224
+	MOVE.W	AmgWrapLine,D1		; $E0, or $00 (256) for 224 lines
+	ELSE
 	MOVE.W	#$E0,D1
+	ENDC
 	SUB.B	TabRasDATA(PC),D1
 	OR.B	#$01,(TabRasCMDS.L,D1.W)
 ; ----------------------------------<=
@@ -5681,7 +5715,12 @@ RGBCont:
 	BEQ.S	EsMasSysCon
 
 	AND.B	#$7F,TabRasCMDS+$00
+	IFD	AMG_M224
+	MOVE.W	AmgGgLine,D1		; the LCD's first line: 24, or 40 for 224 lines
+	OR.B	#$81,(TabRasCMDS.L,D1.W)
+	ELSE
 	OR.B	#$81,TabRasCMDS+$18
+	ENDC
 EsMasSysCon:
 ; ----------------------------------<=
 
@@ -5720,7 +5759,11 @@ AcCoCon0:
 	MOVE.L	CopperLineDos,A5
 
 	LEA	TabRasCMDS,A6
+	IFD	AMG_M224
+	MOVE.W	AmgLinesM1,D6		; 192 or 224 lines
+	ELSE
 	MOVE.W	#(192)-1,D6
+	ENDC
 	MOVEQ	#0,D7
 AcCoBuc:
 	TST.B	(A6)+
@@ -5877,9 +5920,15 @@ AcCoRutBGX:
 	MOVE.B	Regs+UltCoorY(PC),D2	; BG Coor Y	; antes => (A0)
 	ADD.W	D7,D2
 
+	IFD	AMG_M224
+	CMP.W	AmgWrapCmp,D2		; 28 rows, or 32 for 224 lines
+	BCS.S	SehaDesb
+	ADD.B	AmgWrapAdd,D2
+	ELSE
 	CMP.W	#$E0,D2
 	BCS.S	SehaDesb
 	ADD.B	#$20,D2
+	ENDC
 	AND.W	#$00FF,D2
 SehaDesb:
 
@@ -5964,7 +6013,12 @@ SehaDesb:
 PoneSystem:
 	TST.B	Regs+Consola(PC)
 	BNE.S	PoneSystemGG
+	IFD	AMG_M224
+	MOVEQ	#0,D0
+	MOVE.W	AmgDiwTop,D0		; $3BA1, or $1BA1 for 224 lines
+	ELSE
 	MOVE.L	#$3BA1,D0
+	ENDC
 	BTST	#5,VDPRegs+0(PC)
 	BEQ.S	NoLeftClip
 	ADDQ.B	#$8,D0
@@ -6058,9 +6112,16 @@ AmgTmsH1:
 
 	LEA	VRAM,A0			; Base de la VRAM
 	MOVE.B	VDPRegs+2(PC),D0
+	IFD	AMG_M224
+	AND.W	AmgNtMask,D0		; 224 lines: bits 3-2 only, the table at $x700
+	LSL.W	#7,D0
+	LEA	(A0,D0.W*8),A1		; Código texto.
+	ADD.W	AmgNtAdd,A1
+	ELSE
 	AND.W	#$000E,D0
 	LSL.W	#7,D0
 	LEA	(A0,D0.W*8),A1		; Código texto.
+	ENDC
 
 	LEA	PantGfxFast,A2		; Destino
 
@@ -6070,7 +6131,12 @@ AmgTmsH1:
 	MOVE.L	#TabHideSpr,CntHideSpr	; Inicializa contador.
 	MOVE.L	#TabBorGfx,CntBorGfx	; Inicializa contador.
 
+	IFD	AMG_M224
+	MOVEQ	#0,D0
+	MOVE.W	AmgRowsM1,D0		; 28 rows, or 32 for 224 lines
+	ELSE
 	MOVEQ	#(28)-1,D0		; Número de líneas.
+	ENDC
 ImpGfxBuc0:
 	MOVEQ	#0,D7			; Bits de actualización de Gfx.
 	MOVEQ	#(32)-1,D1		; Número de Caracteres por línea.
@@ -6313,7 +6379,11 @@ ImprimeGfx2:
 	LEA	TabBorGfx(PC),A0
 	LEA	PantGfxFast,A1
 	LEA	PantGfx,A5
+	IFD	AMG_M224
+	MOVE.W	AmgRowsM1,D0
+	ELSE
 	MOVE.W	#(28)-1,D0
+	ENDC
 BucGfx0:
 	MOVE.B	(A0)+,D2
 	BEQ.S	ConGfx1
@@ -6365,7 +6435,11 @@ ImprimeGfx2Pri:
 	LEA	PantGfx,A5
 	LEA	TabHideSpr(PC),A4
 
+	IFD	AMG_M224
+	MOVE.W	AmgRowsM1,D0
+	ELSE
 	MOVE.W	#(28)-1,D0
+	ENDC
 BucGfxp0:
 	MOVE.B	(A0)+,D2
 	BEQ	ConGfxp1
@@ -6585,6 +6659,15 @@ SPRTITE0:
 ; ---
 
 ; ---
+	IFD	AMG_M224
+	TST.B	AmgM224On		; 224 lines: Y = $D0 ends nothing, all 64 drawn
+	BEQ.S	AmgSprD0
+	LEA	64(A4),A4
+	LEA	128(A5),A5
+	MOVEQ	#(64)-1,D3
+	BRA.S	SBUC3b
+AmgSprD0:
+	ENDC
 	MOVE.W	#$D0,D3
 	MOVEQ	#64-1,D0		; 64 Sprits a imprimir.
 SPR2PBUC1:
@@ -6603,7 +6686,11 @@ SBUC3b:
 	MOVEQ	#0,D0
 	MOVE.B	-(A4),D0		; Coor Y
 	ADD.B	#16,D0
+	IFD	AMG_M224
+	CMP.W	AmgSprLim,D0		; Y below $C0, or $E0 for 224 lines (+16)
+	ELSE
 	CMP.w	#$C0+16,d0
+	ENDC
 	BCS.S	HAZLOb
 
 	SUBQ	#2,A5
@@ -6703,7 +6790,11 @@ SBUC3:
 	MOVEQ	#0,D0
 	MOVE.B	(A4)+,D0		; Coor Y
 	ADD.B	#16,D0
+	IFD	AMG_M224
+	CMP.W	AmgSprLim,D0		; Y below $C0, or $E0 for 224 lines (+16)
+	ELSE
 	CMP.w	#$C0+16,d0
+	ENDC
 	BCS.s	hazlo
 	CMP.w	#$D0+16,d0
 	BEQ	FinalSpr2
@@ -6874,7 +6965,11 @@ FinalSpr2Pri:
 BucleFS2:
 	MOVE.L	A0,(A1)+
 	ADD.W	#36,A0
+	IFD	AMG_M224
+	CMP.L	AmgMaskEnd,A0		; 28 or 32 rows
+	ELSE
 	CMP.L	#PantGfxMask+(15*36)+(28*8*36),A0
+	ENDC
 	BCS.S	YVDGR
 	LEA	PantGfxMask+(15*36),A0
 YVDGR:
@@ -7747,6 +7842,9 @@ NOB2_E2:
 	OR.W	D1,D0
 	ROR.W	#8,D0
 	MOVE.W	D0,JoyX+0(A3)
+	IFD	AMG_P2PAD
+	OR.B	#$C0,JoyX+1(A3)		; TH lines high, as with no player 2: the merge put the
+	ENDC				; register's stale upper bits there
 
 	RTS
 ; -------------------------------
@@ -7934,6 +8032,9 @@ AmgFfwNo2:
 	OR.W	D3,D0
 	ROR.W	#8,D0
 	MOVE.W	D0,JoyX+0(A3)
+	IFD	AMG_P2PAD
+	OR.B	#$C0,JoyX+1(A3)		; TH lines high, as with no player 2: the merge put the
+	ENDC				; register's stale upper bits there
 
 	RTS
 
@@ -8275,14 +8376,22 @@ CopperLineJmp:
 	DC.W	$008A,0
 
 ;	----------------------=> Los DOS CopperLine
+	IFD	AMG_M224
+CopperLine0:	DCB.L	(CoppLineSize/4)*227,$00FC0000	; 224 lines
+	ELSE
 CopperLine0:	DCB.L	(CoppLineSize/4)*195,$00FC0000
+	ENDC
 
 	DC.W	$FC01,$FFFE		; \
 	DC.W	$009C,$8010		;  - Actualiza VDP
 
 	DC.L	$FFFFFFFE
 
+	IFD	AMG_M224
+CopperLine1:	DCB.L	(CoppLineSize/4)*227,$00FC0000	; 224 lines
+	ELSE
 CopperLine1:	DCB.L	(CoppLineSize/4)*195,$00FC0000
+	ENDC
 
 	DC.W	$FC01,$FFFE		; \
 	DC.W	$009C,$8010		;  - Actualiza VDP
@@ -8394,10 +8503,18 @@ NexSpr=Sprit1-Sprit0
 OtrSpr=Sprit2-Sprit0
 
 ; =----------------------------------------=> Copper Optiones de Linea.
+	IFD	AMG_M224
+CopperOpts0:	DS.W	1216*8		; 224 lines
+	ELSE
 CopperOpts0:	DS.W	1024*8
+	ENDC
 		DS.W	32*16
 
+	IFD	AMG_M224
+CopperOpts1:	DS.W	1216*8		; 224 lines
+	ELSE
 CopperOpts1:	DS.W	1024*8
+	ENDC
 		DS.W	32*16
 ; =----------------------------------------<=
 		DS.W	32*16
@@ -8415,7 +8532,11 @@ CopperOpts1:	DS.W	1024*8
 		DS.B	32*16
 PantGfxFast:	DS.W	32*256*4
 		DS.B	32*16
+	IFD	AMG_M224
+PantGfxMask:	DS.B	36*(256+16)	; 224 lines: 256 rows from row 15
+	ELSE
 PantGfxMask:	DS.B	36*256
+	ENDC
 PantSprFast:	DS.B	36*256*4
 		DS.B	32*16
 ; =----------------------------------------<=

@@ -1,6 +1,6 @@
 """Stage the AmiMasterGear release drawer (the archive itself is made with the Amiga's own LhA).
 
-  python tools/make_release.py [--version 1.1]      -> build/release/
+  python tools/make_release.py [--version 1.2] [--draft]   -> build/release/
 
 Builds the program (`sh build.sh rel`) and the pad test cartridges (tools/padtest_sms.py, needs
 sjasmplus) and stages:
@@ -94,7 +94,7 @@ def guide(readme, version):
     intro, secs = parts[0].strip("\n"), list(zip(parts[1::2], parts[2::2]))
     esc = lambda s: s.replace("\\", "\\\\").replace("@", "\\@")
     out = ["@database AmiMasterGear.guide",
-           "@$VER: AmiMasterGear.guide %s (23.11.2026)" % version,
+           "@$VER: AmiMasterGear.guide %s (25.11.2026)" % version,
            "@author Juan Antonio Gomez Galvez and z00p",
            '@node MAIN "AmiMasterGear %s"' % version, "", esc(intro), ""]
     for i, (title, _) in enumerate(secs):
@@ -252,7 +252,12 @@ def pad_tests():
         return {n: open(os.path.join(t, n), "rb").read() for n in ("PadTest.sms", "PadTest.gg")}
 
 
-def stage(version):
+def unfinished(texts):
+    """Placeholders left in the texts: "PENDING" or an @NAME@ still to fill in."""
+    return sorted({m for t in texts for m in re.findall(r"PENDING|@[A-Z0-9]+@", t)})
+
+
+def stage(version, draft=False):
     exe, prog = build_program(version)
     pads = pad_tests()
     if os.path.isdir(OUT):
@@ -266,6 +271,12 @@ def stage(version):
     put(os.path.join(PKG, "AmiMasterGear.guide"), guide(readme, version))
     put(os.path.join(PKG, "CHANGES.txt"), amiga_text(os.path.join(ROOT, "CHANGES.md"), version, 76, True))
     put(os.path.join(PKG, "NOTICE.txt"), amiga_text(os.path.join(ROOT, "NOTICE.md"), version, 76, True))
+    left = unfinished(open(os.path.join(PKG, f), encoding="ascii").read()
+                      for f in ("ReadMe.txt", "CHANGES.txt", "NOTICE.txt"))
+    if left:
+        print("unfinished text: " + ", ".join(left))
+        if not draft:
+            sys.exit("not a release: fill these in, or stage with --draft")
     page = project_icon(draw_page(), "SYS:Utilities/MultiView")
     for f in ("ReadMe.txt", "AmiMasterGear.guide", "CHANGES.txt", "NOTICE.txt"):
         put(os.path.join(PKG, f + ".info"), page)
@@ -299,4 +310,4 @@ def stage(version):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    stage(a[a.index("--version") + 1] if "--version" in a else "1.1")
+    stage(a[a.index("--version") + 1] if "--version" in a else "1.2", "--draft" in a)
