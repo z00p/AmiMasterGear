@@ -1,6 +1,6 @@
 """Stage the AmiMasterGear release drawer (the archive itself is made with the Amiga's own LhA).
 
-  python tools/make_release.py [--version 1.2] [--draft]   -> build/release/
+  python tools/make_release.py [--version 1.3] [--draft]   -> build/release/
 
 Builds the program (`sh build.sh rel`) and the pad test cartridges (tools/padtest_sms.py, needs
 sjasmplus) and stages:
@@ -94,7 +94,7 @@ def guide(readme, version):
     intro, secs = parts[0].strip("\n"), list(zip(parts[1::2], parts[2::2]))
     esc = lambda s: s.replace("\\", "\\\\").replace("@", "\\@")
     out = ["@database AmiMasterGear.guide",
-           "@$VER: AmiMasterGear.guide %s (25.11.2026)" % version,
+           "@$VER: AmiMasterGear.guide %s (27.11.2026)" % version,
            "@author Juan Antonio Gomez Galvez and z00p",
            '@node MAIN "AmiMasterGear %s"' % version, "", esc(intro), ""]
     for i, (title, _) in enumerate(secs):
@@ -310,4 +310,4 @@ def stage(version, draft=False):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    stage(a[a.index("--version") + 1] if "--version" in a else "1.2", "--draft" in a)
+    stage(a[a.index("--version") + 1] if "--version" in a else "1.3", "--draft" in a)

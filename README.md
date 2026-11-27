@@ -1,6 +1,6 @@
 # AmiMasterGear
 
-**AmiMasterGear 1.2, community version** (25 November 2026). Download: the LhA archive on the [Releases](https://github.com/z00p/AmiMasterGear/releases) page.
+**AmiMasterGear 1.3, community version** (27 November 2026). Download: the LhA archive on the [Releases](https://github.com/z00p/AmiMasterGear/releases) page.
 
 AmiMasterGear is a Sega Master System and Game Gear emulator for AGA Amigas, in 68020
 assembly, by Juan Antonio Gómez Gálvez and z00p. It plays `.sms` and `.gg` cartridge images
@@ -17,7 +17,8 @@ with his permission. Version 1.1 keeps his program and menu and fixes what kept 
 running: cartridges of any size, the Codemasters mapper, bank switching as newer homebrew
 does it, two banks of cartridge RAM, the TMS9918 text mode, the sound chip, full-brightness
 Master System colours and the CD32 pad. Version 1.2 adds the Master System II and Game Gear's
-224-line picture (Micro Machines). What changed is in [CHANGES.md](CHANGES.md).
+224-line picture (Micro Machines). Version 1.3 makes the noise channel start cleanly on a real
+Amiga and fixes a crash after picking a cartridge with a very long file name. What changed is in [CHANGES.md](CHANGES.md).
 
 ## Running it
 
@@ -36,8 +37,9 @@ picture.
 - Assembler: [vasm](http://sun.hasenbraten.de/vasm/), the 68k Motorola-syntax version
   (`vasmm68k_mot`, tested with 2.0f). Put it at `tools/vasmm68k_mot.exe`, have it on the
   PATH, or set `VASM`.
-- `sh build.sh rel` builds the 1.2 program, `build/rel/AmiMasterGear`;
-  `sh build.sh rel11` the 1.1 release program byte for byte, `build/rel11/AmiMasterGear`. The
+- `sh build.sh rel` builds the 1.3 program, `build/rel/AmiMasterGear`;
+  `sh build.sh rel12` and `sh build.sh rel11` the 1.2 and 1.1 release programs byte for byte
+  (`build/rel12/`, `build/rel11/`). The
   switches each sets are listed in `build.sh`.
 - `sh build.sh` with no switches builds Juan's v0.8 unchanged.
 - The vasm line, for reference, run inside `src/`:
@@ -62,11 +64,11 @@ picture.
 | `release/icons/` | the program's icon |
 | `tools/` | the pad test cartridge and the release staging |
 
-The first commit is Juan's v0.8 source as he gave it; then version 1.1 and version 1.2.
+The first commit is Juan's v0.8 source as he gave it; then versions 1.1, 1.2 and 1.3.
 
 ## Credit
 
-- **AmiMasterGear:** Juan Antonio Gómez Gálvez (GUS Entertainment) and z00p (versions 1.1 and 1.2).
+- **AmiMasterGear:** Juan Antonio Gómez Gálvez (GUS Entertainment) and z00p (versions 1.1 to 1.3).
 - **Icons and graphics** in Juan's original: Multivac.
 - **CD32 pad read:** Afrotechmods / FAmiga.
 - **Thanks** (Juan's): Zener and Sandman.
@@ -74,7 +76,7 @@ The first commit is Juan's v0.8 source as he gave it; then version 1.1 and versi
 
 ## Licence
 
-AmiMasterGear is freeware by Juan Antonio Gómez Gálvez. Versions 1.1 and 1.2, by z00p, are a community
+AmiMasterGear is freeware by Juan Antonio Gómez Gálvez. Versions 1.1 to 1.3, by z00p, are a community
 update made and published with his permission. The CD32 pad read is under the MIT licence.
 See [NOTICE.md](NOTICE.md).
 

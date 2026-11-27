@@ -1568,9 +1568,17 @@ MiTiBuc0:
 	ADDQ.W	#1,D0
 	BRA.S	MiTiBuc0
 MiTiCon0:
+	IFD	AMG_NAMECAP		; 1.3: a name of 65 characters or more wrote over MiraCartSize
+	JSR	AmgBuscaFix		; (Amg10.asm); the same 14 bytes as the three below
+	NOP
+	NOP
+	NOP
+	NOP
+	ELSE
 	MOVEQ	#0,D3
 	MOVE.W	#1,BucPunto
 	LEA	(A1,D0.W),A1
+	ENDC
 MiTiBuc1:
 	ADDQ.W	#1,D3
 	MOVE.B	-(A0),-(A1)

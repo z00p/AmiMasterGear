@@ -1,9 +1,40 @@
 # Changes from Juan's v0.8
 
-AmiMasterGear 1.2 is built from the sources of AmiMasterGear v0.8 (12 December 1999) by Juan
+AmiMasterGear 1.3 is built from the sources of AmiMasterGear v0.8 (12 December 1999) by Juan
 Antonio Gómez Gálvez. This file lists what changed for the user, grouped. Every change sits
 behind its own assembler switch (`AMG_` names in `src/Amg10.asm`); without them the source
 builds Juan's v0.8 byte for byte.
+
+## 1.3 (27 November 2026)
+
+### Sound
+- The noise channel now restarts cleanly on a real Amiga when a game switches it between white
+  noise (drums) and periodic noise (bass) (`AMG_NOISESTOP`). Paula only stops a channel at the
+  end of the word it is playing, at the period it holds then. 1.2 set the new, much slower bass
+  period before the stop, so the stop often came too late and the old white noise played on at
+  the bass pitch: Jumping Jack'son's bass sounded rough and buzzy on the A1200. Now the channel
+  is only restarted after Paula has really stopped: the fastest period goes in before the stop,
+  the new one just before the restart, and the wait is the old period plus two lines (no longer
+  capped at 40 lines; only on a white/periodic change). Heard on a real A1200. WinUAE stops a
+  channel at once, so there it sounds as 1.2 did.
+
+### Menu and files
+- Picking a cartridge whose file name is 65 characters or longer no longer corrupts the
+  program (`AMG_NAMECAP`). Juan's BuscaExt copied the end of the name into a 72-byte buffer
+  with no limit, so a long name wrote over the code behind it: the next Insert crashed
+  (80000004 on the A1200) or hung. The bug dates from the original 0.8. Only the last 64
+  characters are looked at now (the extension is all it needs); the hook takes the same 14
+  bytes as before, so nothing in Juan's code moves. The same fix as AmiGameBoy 2.5.1.
+- Titles say "AmiMasterGear 1.3" (`AMG_V13`).
+
+### Checked
+- On an A1200 with a PiStorm (AGA, Paula): Jumping Jack'son's bass recorded by line-in with the
+  noise fix, and the 1.3 candidate run.
+- In WinUAE: two cartridges in one session, the first with a 69-character name. 1.2 never
+  loaded the second; 1.3 ran both. Noise recorded from 1.2 and 1.3 in five Master System games
+  (Jumping Jack'son, Sonic the Hedgehog, Streets of Rage, R-Type, Power Strike II): overall
+  level within 0.05 dB in every band, no more different than two takes of 1.2.
+- `sh build.sh rel12` still builds the 1.2 release byte for byte.
 
 ## 1.2 (25 November 2026)
 

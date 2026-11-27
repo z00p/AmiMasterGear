@@ -8,6 +8,10 @@ Juan began AmiMasterGear in 1997 and made it freeware. In 2026 he gave
 his sources (version 0.8) to the community. This community version,
 @VERSION@, is built from them and published with his permission.
 
+Version @VERSION@, 27 November 2026. New in 1.3: the noise channel
+(Jumping Jack'son's bass) starts cleanly on a real Amiga, and a
+cartridge with a very long file name no longer crashes the next Insert.
+
 While a game runs, AmiMasterGear takes over the machine. Esc goes back
 to the menu.
 
@@ -179,7 +183,10 @@ frozen games, Black Sea Treasure Hunters, CD32 pads in both ports (a
 KTRL CD32 and a PlayStation pad on a CD32 adapter, with PadTest), the
 drums in Jumping Jack'son, and prefs from 1.1 getting both priority
 options switched on. Not tried on hardware: the Port 2 default without
-a prefs file (WinUAE only).
+a prefs file (WinUAE only). 1.3: Jumping Jack'son's bass recorded by
+line-in from the A1200 with the noise fix, and the 1.3 candidate run
+there. The long-name fix was tested in WinUAE (a second Insert after a
+69-character name).
 No real 68030 was to hand: its speed is the WinUAE measurement only.
 
 
@@ -190,8 +197,6 @@ Known differences
   from the sprites.
 - An occasional one-frame black flicker during play, seen on an A1200
   (Micro Machines). Cause not yet found.
-- Rhythm sounds made from the noise channel can sound rough next to the
-  console (heard in Jumping Jack'son's music). Being looked into.
 - A thin line can show at the left edge of the picture on bright screens
   on real AGA (also in 1.1).
 

@@ -154,12 +154,15 @@ AutoFrame:
 	IFD	AUTOPREFS
 	BSR	AutoPrefsLine
 	ENDC
+	IFD	AUTONOHOLD
+	BRA.S	.held			; real A1200: no PC on the serial port, leave straight away
+	ENDC
 .hold:
 	MOVE.W	$018(A6),D0
 	BTST	#14,D0			; receive buffer full = the PC has its picture
 	BEQ.S	.hold
 	MOVE.W	#$0800,$09C(A6)
-
+.held:
 	MOVE.L	AutoNext,A0
 	TST.L	(A0)
 	BNE.S	.ret

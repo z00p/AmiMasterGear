@@ -333,6 +333,12 @@ AmgBoxList:				; Centrar: x = (976 - width) / 2, so centred on 488
 	DC.L	MainMenuText5,976
 	DC.L	0,0
 
+	IFD	AMG_V13			; the 1.3 version text
+AmgWTitle:	DC.B	"AmiMasterGear 1.3",0
+AmgSTitle:	DC.B	"AmiMasterGear 1.3.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
+AmgBox0:	DC.B	"AmiMasterGear 1.3",0
+AmgScrTitle:	DC.B	"AmiMasterGear 1.3 Screen.",0
+	ELSE
 	IFD	AMG_V12			; the 1.2 version text
 AmgWTitle:	DC.B	"AmiMasterGear 1.2",0
 AmgSTitle:	DC.B	"AmiMasterGear 1.2.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
@@ -344,16 +350,40 @@ AmgSTitle:	DC.B	"AmiMasterGear 1.1.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez 
 AmgBox0:	DC.B	"AmiMasterGear 1.1",0
 AmgScrTitle:	DC.B	"AmiMasterGear 1.1 Screen.",0
 	ENDC
+	ENDC
 AmgBox3:	DC.B	"and z00p",0
+	IFD	AMG_V13
+AmgAb0:		DC.B	"AmiMasterGear 1.3",0
+	ELSE
 	IFD	AMG_V12
 AmgAb0:		DC.B	"AmiMasterGear 1.2",0
 	ELSE
 AmgAb0:		DC.B	"AmiMasterGear 1.1",0
 	ENDC
+	ENDC
 AmgAb1:		DC.B	"(November 2026)",0
 AmgAb2:		DC.B	"Program and emulation:",0
 AmgAb3:		DC.B	"Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
 	CNOP	0,4
+	ENDC
+
+	IFD	AMG_NAMECAP
+	SECTION	AmgNameCap,CODE
+
+; Juan's BuscaExt (Insert) copies the end of the file name back to its dot into MiTiNom, which
+; holds 8 + 64 bytes, from MiTiNom+8+length down. A name of 65 characters or more wrote its
+; extension and the 0 over the code behind it (MiraCartSize), so the next Insert crashed
+; (80000004) or hung. Here only the last 64 characters are looked at: the extension is all
+; BuscaExt wants. In place of his MOVEQ #0,D3 / MOVE.W #1,BucPunto / LEA (A1,D0.W),A1 (the same
+; 14 bytes: JSR and four NOPs), as AmiGameBoy 2.5.1 does.
+AmgBuscaFix:
+	MOVEQ	#0,D3
+	MOVE.W	#1,BucPunto
+	CMP.W	#64,D0
+	BLS.S	.ok
+	MOVEQ	#64,D0
+.ok:	LEA	(A1,D0.W),A1
+	RTS
 	ENDC
 
 	IFD	AMG_DRAWERS
@@ -1753,10 +1783,24 @@ AmgPsgPlay:
 ; sample it is playing: wait the old period (227 colour clocks a line) plus two lines, at most 40.
 ; The chip restarts its shift register when the noise control is written, so starting the
 ; sample from its beginning is right too.
+; AMG_NOISESTOP: on a real Paula a channel whose DMA is switched off only stops after the second
+; byte of a word (state 3 of the HRM's audio state diagram), and that byte plays at the period
+; AUDxPER holds when it starts. Without the switch the new period is already written, so in
+; the first byte the stop takes the rest of it plus a whole new period: going from white
+; (period 512) to the periodic bass (several thousand) that is far longer than the wait, DMA
+; comes back on before Paula has stopped, and the old white sample plays on at the bass period
+; until it ends (16384 steps). With the switch the second byte plays at Paula's fastest period,
+; 124, which the wait (old period plus at least one line) covers, and the new period goes in
+; just before the channel is started again. The 40-line cap goes too: after the slowest noise
+; (period 33040) the wait is 147 lines, but only then; a cap shorter than the old period lets the
+; old sample play on the same way.
 	AND.B	#4,D2
 	CMP.B	AmgPsgMode,D2
 	BEQ.S	.keep
 	MOVE.B	D2,AmgPsgMode
+	IFD	AMG_NOISESTOP
+	MOVE.W	#124,$D6(A6)		; the byte after this one: fastest
+	ENDC
 	MOVE.W	#$0008,$96(A6)		; AUD3 off
 	TST.B	D2
 	BEQ.S	.pulse
@@ -1769,13 +1813,18 @@ AmgPsgPlay:
 	MOVE.W	AmgPsgPer,D0
 	DIVU.W	#227,D0
 	ADDQ.W	#2,D0
+	IFND	AMG_NOISESTOP
 	CMP.W	#40,D0
 	BLS.S	.lines
 	MOVEQ	#40,D0
+	ENDC
 .lines:	MOVE.B	$06(A6),D2		; VHPOSR: the line
 .line:	CMP.B	$06(A6),D2
 	BEQ.S	.line
 	DBF	D0,.lines
+	IFD	AMG_NOISESTOP
+	MOVE.W	D1,$D6(A6)		; the new period
+	ENDC
 	MOVE.W	#$8008,$96(A6)		; AUD3 on: the new sample from its start
 .keep:	MOVE.W	D1,AmgPsgPer
 .out:	MOVEM.L	AmgPsgSave2,D2-D3/A0-A2

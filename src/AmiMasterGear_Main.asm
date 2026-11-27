@@ -37,10 +37,14 @@ ColorDebug=1
 
 	BRA.S	Vamos
 	IFD	AMG_TITLES
+	IFD	AMG_V13
+	DC.B	"$VER: AmiMasterGear 1.3 (27.11.2026)",0,0
+	ELSE
 	IFD	AMG_V12
 	DC.B	"$VER: AmiMasterGear 1.2 (25.11.2026)",0,0
 	ELSE
 	DC.B	"$VER: AmiMasterGear 1.1 (23.11.2026)",0,0
+	ENDC
 	ENDC
 	ELSE
 	DC.B	"$VER:AmiMasterGear Emulator v0.8 (12.12.99)",0,0
