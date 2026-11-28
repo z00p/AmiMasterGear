@@ -1,11 +1,11 @@
 # AmiMasterGear
 
-**AmiMasterGear 1.3, community version** (27 November 2026). Download: the LhA archive on the [Releases](https://github.com/z00p/AmiMasterGear/releases) page.
+**AmiMasterGear 2.0, community version** (28 November 2026). Download: the LhA archive on the [Releases](https://github.com/z00p/AmiMasterGear/releases) page.
 
-AmiMasterGear is a Sega Master System and Game Gear emulator for AGA Amigas, in 68020
-assembly, by Juan Antonio Gómez Gálvez and z00p. It plays `.sms` and `.gg` cartridge images
-with sound, battery saves, frozen games (snapshots) and CD32 pads. While a game runs it takes
-over the machine.
+AmiMasterGear is a Sega Master System and Game Gear emulator for AGA Amigas and Picasso96
+graphics boards, in 68020 assembly, by Juan Antonio Gómez Gálvez and z00p. It plays `.sms` and
+`.gg` cartridge images with sound, battery saves, frozen games (snapshots) and CD32 pads. While
+a game runs it takes over the machine.
 
 No games are included. Bring cartridge images you may legally have.
 
@@ -18,18 +18,23 @@ running: cartridges of any size, the Codemasters mapper, bank switching as newer
 does it, two banks of cartridge RAM, the TMS9918 text mode, the sound chip, full-brightness
 Master System colours and the CD32 pad. Version 1.2 adds the Master System II and Game Gear's
 224-line picture (Micro Machines). Version 1.3 makes the noise channel start cleanly on a real
-Amiga and fixes a crash after picking a cartridge with a very long file name. What changed is in [CHANGES.md](CHANGES.md).
+Amiga and fixes a crash after picking a cartridge with a very long file name. Version 2.0 adds the RTG
+program: the game on a Picasso96 screen for PiStorm-class machines, a big 1080p menu, Arnold's
+seven scanline settings and double buffering. What changed is in [CHANGES.md](CHANGES.md).
 
 ## Running it
 
-The release archive holds the AmiMasterGear drawer: the program, a Cartridges drawer (where
+The release archive holds the AmiMasterGear drawer: the two programs, `AGA` (Juan's AGA
+display) and `RTG` (Picasso96), a sample `AmiMasterGear.config` for RTG, a Cartridges drawer (where
 Insert opens, with the pad test cartridges PadTest.sms and PadTest.gg), a Frozen drawer,
 `ReadMe.txt`, `AmiMasterGear.guide`, `CHANGES.txt` and `NOTICE.txt`. The manual is
 [docs/package/ReadMe.txt](docs/package/ReadMe.txt): requirements, keys and pads, saves and
 the limits.
 
-Needs an AGA Amiga with a 68020 or better and AmigaOS 3.0 or later. Tested on an A1200 with a
-PiStorm and in WinUAE. Not supported: the FM sound unit and the PAL Master System II's 240-line
+AGA needs an AGA Amiga with a 68020 or better and AmigaOS 3.0 or later. RTG needs a
+PiStorm-class accelerator with Picasso96 and a 16-bit screen mode; on a PiStorm the HDMI rate
+(50 or 60 Hz) is set at boot in Emu68's config.txt. Tested on an A1200 with a PiStorm and in
+WinUAE. Not supported: the FM sound unit and the PAL Master System II's 240-line
 picture.
 
 ## Building
@@ -37,6 +42,9 @@ picture.
 - Assembler: [vasm](http://sun.hasenbraten.de/vasm/), the 68k Motorola-syntax version
   (`vasmm68k_mot`, tested with 2.0f). Put it at `tools/vasmm68k_mot.exe`, have it on the
   PATH, or set `VASM`.
+- `sh build.sh rel20` builds the two 2.0 programs, `build/rel20/AGA` and `build/rel20/RTG`.
+  `sh build.sh rtg` builds the RTG program as a test build (its name, number and date in the
+  titles; `BUILDNAME=` names it).
 - `sh build.sh rel` builds the 1.3 program, `build/rel/AmiMasterGear`;
   `sh build.sh rel12` and `sh build.sh rel11` the 1.2 and 1.1 release programs byte for byte
   (`build/rel12/`, `build/rel11/`). The
@@ -46,7 +54,7 @@ picture.
   `vasmm68k_mot -devpac -nocase -m68020 -Fhunkexe -nosym -maxerrors=0 -DAMG_...=1 -o AmiMasterGear AmiMasterGear_Main.asm`
 - `python tools/padtest_sms.py` builds PadTest.sms and PadTest.gg (needs
   [sjasmplus](https://github.com/z00m128/sjasmplus); set `SJASMPLUS` or have it on the PATH).
-- `python tools/make_release.py` builds the program and the pad tests and stages the release
+- `python tools/make_release.py` builds the two programs and the pad tests and stages the release
   drawer in `build/release/` (needs Pillow for the drawer and text icons). The archive is
   made with the Amiga's own `lha`.
 
@@ -59,25 +67,28 @@ picture.
 | `src/GadToolsBox/` | the menu's GadToolsBox source and generated code |
 | `src/data/` | Juan's graphics (logo, panel, font, pad pictures) and noise sample |
 | `src/Amg10.asm` | the community changes, each behind its own `AMG_` switch |
+| `src/AmgRtg.asm`, `src/AmgRtgCfg.asm` | the RTG program's game screen and its settings |
+| `src/AmgMenu.asm`, `src/rtgmenu.s` | the big RTG menu and its kit (MIT) |
 | `src/AutoTest.asm` | test builds only (`-DAUTOTEST=1`), never in a release |
-| `docs/package/` | the ReadMe that goes in the archive |
+| `docs/package/` | the ReadMe and sample config that go in the archive |
 | `release/icons/` | the program's icon |
-| `tools/` | the pad test cartridge and the release staging |
+| `tools/` | the pad test cartridge, the big menu's logo and the release staging |
 
-The first commit is Juan's v0.8 source as he gave it; then versions 1.1, 1.2 and 1.3.
+The first commit is Juan's v0.8 source as he gave it; then versions 1.1, 1.2, 1.3 and 2.0.
 
 ## Credit
 
-- **AmiMasterGear:** Juan Antonio Gómez Gálvez (GUS Entertainment) and z00p (versions 1.1 to 1.3).
+- **AmiMasterGear:** Juan Antonio Gómez Gálvez (GUS Entertainment) and z00p (versions 1.1 to 2.0).
 - **Icons and graphics** in Juan's original: Multivac.
 - **CD32 pad read:** Afrotechmods / FAmiga.
+- **RTG menu kit and Pixel font:** z00p (MIT).
 - **Thanks** (Juan's): Zener and Sandman.
 - Juan's original was made with Devpac III (HiSoft) and GadToolsBox (Jaba Development).
 
 ## Licence
 
-AmiMasterGear is freeware by Juan Antonio Gómez Gálvez. Versions 1.1 to 1.3, by z00p, are a community
-update made and published with his permission. The CD32 pad read is under the MIT licence.
+AmiMasterGear is freeware by Juan Antonio Gómez Gálvez. Versions 1.1 to 2.0, by z00p, are a community
+update made and published with his permission. The CD32 pad read and the RTG menu kit are under the MIT licence.
 See [NOTICE.md](NOTICE.md).
 
 ## Trademarks
@@ -87,5 +98,5 @@ or endorsed by Sega.
 
 ## Reporting problems
 
-Open an issue with the game, the Joy-Control setting, and your machine: CPU or accelerator, or
+Open an issue with the game, the program (AGA or RTG), the Joy-Control setting, and your machine: CPU or accelerator, or
 emulator.

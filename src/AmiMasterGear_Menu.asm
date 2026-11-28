@@ -79,6 +79,9 @@ YaStc20:
 CLI:
 ; <=----------------------------------=>
 
+	IFD	AMG_RTGCFG
+	JSR	AmgCfgRead		; RTG game-screen options: PROGDIR:AmiMasterGear.config, ToolTypes (AmgRtgCfg.asm)
+	ENDC
 	IFD	AMG_TITLES
 	JSR	AmgTitles
 	ENDC
@@ -377,6 +380,12 @@ Programa:
 	BSR	LoadPrefs
 	BSR	PonPrefs
 ; ------------------------------------------
+	IFD	AMG_RTGMENU
+	JSR	AmgRtgMenuMode		; the menu on the RTG board too (AmgRtg.asm)
+	ENDC
+	IFD	AMG_BIGMENU
+	JSR	bm_init			; the big RTG menu (AmgMenu.asm): DOS is safe here
+	ENDC
 	BSR	SetupScreen
 ; ------------------------------------------
 
@@ -405,7 +414,11 @@ Programa:
 	MOVE.L	50(A0),A0
 	LEA	DatsMasterGearPic,A1
 	MOVE.L	_IntuitionBase,A6
+	IFD	AMG_BIGMENU
+	JSR	bm_drawimage		; the big RTG menu (AmgMenu.asm)
+	ELSE
 	JSR	-114(A6)
+	ENDC
 ; ------------------------------------------
 	BSR	ImpJoyType
 ; ------------------------------------------
@@ -505,6 +518,9 @@ EsNTSC2:MOVE.W	D1,$DFF1DC
 NoChangeCon:
 ; ------------------------------------------
 Quitar:	JSR	CloseDownScreen
+	IFD	AMG_BIGMENU
+	JSR	bm_exit			; the big RTG menu: its font and pictures
+	ENDC
 ; ------------------------------------------=> Quit
 	MOVEQ	#0,D0	; Salir Sín Errores
 	RTS
@@ -596,7 +612,11 @@ ImprHelpJoy:
 	MOVE.L	50(A0),A0
 	LEA	DatsJoyTypePic,A1
 	MOVE.L	_IntuitionBase,A6
+	IFD	AMG_BIGMENU
+	JMP	bm_drawimage		; the big RTG menu (AmgMenu.asm)
+	ELSE
 	JMP	-114(A6)
+	ENDC
 
 ; ------------------------------------------
 ; ******************************************
@@ -1088,7 +1108,13 @@ NoEsNTSC:MOVE.W	D1,$DFF1DC
 	ST	GoDat
 ; -=-=-
 	IFD	GG_Menu
+	IFD	AMG_RTG
+	JSR	AmgRtgOpen		; the RTG screen, OS alive (AmgRtg.asm)
+	ENDC
 	JSR	MasterGearEmul
+	IFD	AMG_RTG
+	JSR	AmgRtgClose
+	ENDC
 	ENDC
 ; -=-=-
 	BSR	RefrescaReloj
@@ -2443,7 +2469,11 @@ ImpJoyType:
 	MOVE.L	50(A0),A0
 	LEA	DatsJoyTypePic,A1
 	MOVE.L	_IntuitionBase,A6
+	IFD	AMG_BIGMENU
+	JMP	bm_drawimage		; the big RTG menu (AmgMenu.asm)
+	ELSE
 	JMP	-114(A6)
+	ENDC
 	CNOP	0,4
 TabGfxJoyType:
 	DC.L	GBJoyStick
@@ -4175,7 +4205,11 @@ iCNT=-4
 	DC.L	0
 	DC.L	MainMenuWnd
 	DC.L	MainMenuGadgets
+	IFD	AMG_BIGMENU
+	DC.L	MainMenu_CNT+1		; the big menu's two selectors found too (0 when not made)
+	ELSE
 	DC.L	MainMenu_CNT-1
+	ENDC
 MainMenuPunts:
 	DC.L	GD_Insert,Insert
 	DC.L	GD_ReadBatt,ReadBatt
@@ -4187,6 +4221,10 @@ MainMenuPunts:
 	DC.L	GD_PowerON,PowerON
 	DC.L	GD_Continue,Continue
 	DC.L	GD_Exit,ControlSalir
+	IFD	AMG_BIGMENU
+	DC.L	GD_Scan,bm_gscan	; the big RTG menu's Scanlines (AmgMenu.asm)
+	DC.L	GD_ScanSty,bm_gsty	; and its Scanline style
+	ENDC
 	DC.L	0,0
 MainMenuValues:
 	DC.W	GD_CPUspd,0

@@ -333,6 +333,23 @@ AmgBoxList:				; Centrar: x = (976 - width) / 2, so centred on 488
 	DC.L	MainMenuText5,976
 	DC.L	0,0
 
+	IFD	AMG_BUILDINFO		; 2.0 test builds: the build's name and date in the titles (feedback,
+	INCLUDE	"buildinfo.i"		; 26 Nov 2026); build.sh writes build/buildinfo.i (AMGBUILD)
+AmgWTitle:	AMGBUILD
+	DC.B	0
+AmgSTitle:	AMGBUILD
+	DC.B	".  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
+AmgScrTitle:	AMGBUILD
+	DC.B	" Screen.",0
+AmgBox0:	AMGVERS			; "AmiMasterGear <AMG_VER>": 2.0 in the RTG builds
+	DC.B	0
+	ELSE
+	IFD	AMG_V20			; the 2.0 version text (the release titles, no build info)
+AmgWTitle:	DC.B	"AmiMasterGear 2.0",0
+AmgSTitle:	DC.B	"AmiMasterGear 2.0.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
+AmgBox0:	DC.B	"AmiMasterGear 2.0",0
+AmgScrTitle:	DC.B	"AmiMasterGear 2.0 Screen.",0
+	ELSE
 	IFD	AMG_V13			; the 1.3 version text
 AmgWTitle:	DC.B	"AmiMasterGear 1.3",0
 AmgSTitle:	DC.B	"AmiMasterGear 1.3.  ",$A9," 1997-2026 Juan Antonio G",$F3,"mez G",$E1,"lvez and z00p",0
@@ -351,7 +368,16 @@ AmgBox0:	DC.B	"AmiMasterGear 1.1",0
 AmgScrTitle:	DC.B	"AmiMasterGear 1.1 Screen.",0
 	ENDC
 	ENDC
+	ENDC
+	ENDC
 AmgBox3:	DC.B	"and z00p",0
+	IFD	AMG_BUILDINFO
+AmgAb0:		AMGVERS			; the About box says the same as the credit box
+	DC.B	0
+	ELSE
+	IFD	AMG_V20
+AmgAb0:		DC.B	"AmiMasterGear 2.0",0
+	ELSE
 	IFD	AMG_V13
 AmgAb0:		DC.B	"AmiMasterGear 1.3",0
 	ELSE
@@ -359,6 +385,8 @@ AmgAb0:		DC.B	"AmiMasterGear 1.3",0
 AmgAb0:		DC.B	"AmiMasterGear 1.2",0
 	ELSE
 AmgAb0:		DC.B	"AmiMasterGear 1.1",0
+	ENDC
+	ENDC
 	ENDC
 	ENDC
 AmgAb1:		DC.B	"(November 2026)",0

@@ -57,6 +57,10 @@ GD_EmuType                             EQU    12
 GD_JoyPort                             EQU    13
 GD_CPUspd                              EQU    14
 GD_Vlines                              EQU    15
+	IFD	AMG_BIGMENU
+GD_Scan                                EQU    16	; the big RTG menu's Scanlines (AmgMenu.asm)
+GD_ScanSty                             EQU    17	; and its Scanline style (a chooser.gadget list)
+	ENDC
 
 GD_HPcontinue                          EQU    0
 
@@ -162,6 +166,10 @@ MTags1:
     DC.L    $80080031,topaz8,$00000000
 MainMenuGadgets:
     DCB.L    16,0
+	IFD	AMG_BIGMENU
+    DC.L    0			; GD_Scan
+    DC.L    0			; GD_ScanSty
+	ENDC
 HelpPageGadgets:
     DCB.L    1,0
 MC68020Gadgets:
@@ -289,6 +297,10 @@ MainMenuGTypes:
     DC.W    5
     DC.W    7
     DC.W    12
+	IFD	AMG_BIGMENU
+    DC.W    7
+    DC.W    7
+	ENDC
 
 HelpPageGTypes:
     DC.W    1
@@ -406,6 +418,16 @@ MainMenuNGads:
     DC.L    VlinesText,0
     DC.W    GD_Vlines
     DC.L    $0021,0,0
+	IFD	AMG_BIGMENU
+    DC.W    502,122,95,13		; (made only in the big menu's layout: bm_mmcnt)
+    DC.L    bm_scantext,0
+    DC.W    GD_Scan
+    DC.L    $0021,0,0
+    DC.W    448,136,149,13
+    DC.L    bm_stytext,0
+    DC.W    GD_ScanSty
+    DC.L    $0021,0,0
+	ENDC
 
 HelpPageNGads:
     DC.W    197,150,99,15
@@ -591,6 +613,12 @@ MainMenuGTags:
     DC.L    $8008002D,VlinesString
     DC.L    $8008002E,3
     DC.L    $00000000
+	IFD	AMG_BIGMENU
+    DC.L    $00000002,bm_scantags	; TAG_MORE
+    DC.L    $00000000
+    DC.L    $00000002,bm_stytags	; TAG_MORE
+    DC.L    $00000000
+	ENDC
 
 
 VlinesString:
@@ -3075,6 +3103,9 @@ MainMenuGL:
     asl.l   #1,d1
     add.l   d1,a0
     move.w  (a0),d0
+	IFD	AMG_BIGMENU
+	jsr	bm_chpre		; the Scanline style: a chooser, GadTools makes its label only
+	ENDC
     move.l  a3,a0
     lea.l   BufNewGad,a1
     move.l  a4,a2
@@ -3090,6 +3121,9 @@ MainMenuCOK:
     lea.l   MainMenuGadgets,a0
     add.l   d0,a0
     move.l  a3,(a0)
+	IFD	AMG_BIGMENU
+	jsr	bm_chpost		; (MainMenuGadgets holds the chooser)
+	ENDC
 MainMenuTL:
     tst.l   (a4)
     beq.s   MainMenuDN
@@ -3098,7 +3132,11 @@ MainMenuTL:
 MainMenuDN:
     addq.w  #4,a4
     addq.w  #1,d3
+	IFD	AMG_BIGMENU
+    cmp.w   bm_mmcnt,d3		; 16, or 17 with the big menu's Scanlines
+	ELSE
     cmp.w   #MainMenu_CNT,d3
+	ENDC
     bmi     MainMenuGL
     movem.w (sp)+,d2-d3
     move.l  MainMenuGList,MainMenuWG+4
@@ -3139,6 +3177,9 @@ MainMenuDN:
     suba.l  a1,a1
     jsr     GT_RefreshWindow(a6)
     jsr     MainMenuRender
+	IFD	AMG_BIGMENU
+	jsr	bm_chadd		; the chooser into the window
+	ENDC
     moveq   #0,d0
 MainMenuDone:
     movem.l (sp)+,d1-d4/a0-a4/a6
@@ -3173,6 +3214,9 @@ MainMenuNMenu:
     move.l  MainMenuWnd,a0
     cmpa.l  #0,a0
     beq     MainMenuNWnd
+	IFD	AMG_BIGMENU
+	jsr	bm_chrem		; the chooser out first
+	ENDC
     jsr     CloseWindow(a6)
     move.l  #0,MainMenuWnd
 MainMenuNWnd:
@@ -3183,6 +3227,9 @@ MainMenuNWnd:
     jsr     FreeGadgets(a6)
     move.l  #0,MainMenuGList
 MainMenuNGad:
+	IFD	AMG_BIGMENU
+	jsr	bm_chfree		; then freed
+	ENDC
     movem.l (sp)+,d0-d1/a0-a2/a6
     rts
 

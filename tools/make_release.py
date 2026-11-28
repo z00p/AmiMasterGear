@@ -1,13 +1,14 @@
 """Stage the AmiMasterGear release drawer (the archive itself is made with the Amiga's own LhA).
 
-  python tools/make_release.py [--version 1.3] [--draft]   -> build/release/
+  python tools/make_release.py [--version 2.0] [--draft]   -> build/release/
 
-Builds the program (`sh build.sh rel`) and the pad test cartridges (tools/padtest_sms.py, needs
-sjasmplus) and stages:
+Builds the two programs (`sh build.sh rel20`: AGA and RTG) and the pad test cartridges
+(tools/padtest_sms.py, needs sjasmplus) and stages:
 
   build/release/AmiMasterGear.info          the drawer's icon
   build/release/AmiMasterGear/
-    AmiMasterGear, AmiMasterGear.info       the program, its icon (release/icons, positions cleared)
+    AGA, AGA.info, RTG, RTG.info            the programs, their icon (release/icons, positions cleared)
+    AmiMasterGear.config                    the RTG program's sample settings (docs/package)
     ReadMe.txt, AmiMasterGear.guide         docs/package/ReadMe.txt, and a guide made from it
     CHANGES.txt, NOTICE.txt                 from CHANGES.md and NOTICE.md (ASCII, 79 columns)
     Cartridges/ (+ .info)                   PadTest.sms, PadTest.gg and a note (no icons)
@@ -31,6 +32,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "build", "release")
 PKG = os.path.join(OUT, "AmiMasterGear")
 ROM_EXT = {".sms", ".gg", ".sg", ".sc", ".mv", ".sav", ".zip", ".lha", ".lzx", ".rom", ".bin"}
+PROGRAMS = ("AGA", "RTG")                                # build/rel20/<name>
+DATES = {"1.3": "27.11.2026", "2.0": "28.11.2026"}
 NOPOS = struct.pack(">ii", -0x80000000, -0x80000000)
 CART_NOTE = ("Put your cartridge images (.sms and .gg files) here, or browse to them\n"
              "anywhere else: AmiMasterGear's Insert requester opens this drawer.\n"
@@ -94,7 +97,7 @@ def guide(readme, version):
     intro, secs = parts[0].strip("\n"), list(zip(parts[1::2], parts[2::2]))
     esc = lambda s: s.replace("\\", "\\\\").replace("@", "\\@")
     out = ["@database AmiMasterGear.guide",
-           "@$VER: AmiMasterGear.guide %s (27.11.2026)" % version,
+           "@$VER: AmiMasterGear.guide %s (%s)" % (version, DATES.get(version, "28.11.2026")),
            "@author Juan Antonio Gomez Galvez and z00p",
            '@node MAIN "AmiMasterGear %s"' % version, "", esc(intro), ""]
     for i, (title, _) in enumerate(secs):
@@ -230,19 +233,22 @@ def put(path, data):
     open(path, "wb").write(data if isinstance(data, bytes) else data.encode("ascii"))
 
 
-def build_program(version):
-    if subprocess.run(["sh", "build.sh", "rel"], cwd=ROOT).returncode:
-        sys.exit("sh build.sh rel failed")
-    exe = os.path.join(ROOT, "build", "rel", "AmiMasterGear")
-    d = open(exe, "rb").read()
-    if struct.unpack(">I", d[:4])[0] != 0x3F3:
-        sys.exit("not an Amiga executable")
-    if b"$VER: AmiMasterGear %s " % version.encode() not in d:
-        sys.exit("the program's $VER is not %s" % version)
-    for bad in (b"@ERR ", b"@START", b"@END"):
-        if bad in d:
-            sys.exit("test code in the program ('%s')" % bad.decode())
-    return exe, d
+def build_programs(version):
+    if subprocess.run(["sh", "build.sh", "rel20"], cwd=ROOT).returncode:
+        sys.exit("sh build.sh rel20 failed")
+    exes = {}
+    for name in PROGRAMS:
+        exe = os.path.join(ROOT, "build", "rel20", name)
+        d = open(exe, "rb").read()
+        if struct.unpack(">I", d[:4])[0] != 0x3F3:
+            sys.exit(name + ": not an Amiga executable")
+        if b"$VER: AmiMasterGear %s " % version.encode() not in d:
+            sys.exit("%s: the program's $VER is not %s" % (name, version))
+        for bad in (b"@ERR ", b"@START", b"@END", b"test build"):
+            if bad in d:
+                sys.exit("%s: test code in the program ('%s')" % (name, bad.decode()))
+        exes[name] = exe
+    return exes
 
 
 def pad_tests():
@@ -258,14 +264,17 @@ def unfinished(texts):
 
 
 def stage(version, draft=False):
-    exe, prog = build_program(version)
+    exes = build_programs(version)
     pads = pad_tests()
     if os.path.isdir(OUT):
         shutil.rmtree(OUT)
     os.makedirs(PKG)
-    shutil.copy(exe, os.path.join(PKG, "AmiMasterGear"))
-    put(os.path.join(PKG, "AmiMasterGear.info"),
-        no_position(open(os.path.join(ROOT, "release", "icons", "AmiMasterGear.info"), "rb").read()))
+    icon = no_position(open(os.path.join(ROOT, "release", "icons", "AmiMasterGear.info"), "rb").read())
+    for name, exe in exes.items():
+        shutil.copy(exe, os.path.join(PKG, name))
+        put(os.path.join(PKG, name + ".info"), icon)
+    put(os.path.join(PKG, "AmiMasterGear.config"),
+        amiga_text(os.path.join(ROOT, "docs", "package", "AmiMasterGear.config"), version))
     readme = amiga_text(os.path.join(ROOT, "docs", "package", "ReadMe.txt"), version)
     put(os.path.join(PKG, "ReadMe.txt"), readme)
     put(os.path.join(PKG, "AmiMasterGear.guide"), guide(readme, version))
@@ -300,7 +309,7 @@ def stage(version, draft=False):
                 sys.exit("name over 30 characters: " + rel)
             if f.endswith(".info") and open(p, "rb").read()[58:66] != NOPOS:
                 sys.exit("icon with a position: " + rel)
-            if f != "AmiMasterGear" and os.path.getsize(p) > 100000:
+            if f not in PROGRAMS and os.path.getsize(p) > 100000:
                 sys.exit("unexpected large file: " + rel)
             files.append((rel, os.path.getsize(p)))
     for rel, size in files:
@@ -310,4 +319,4 @@ def stage(version, draft=False):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    stage(a[a.index("--version") + 1] if "--version" in a else "1.3", "--draft" in a)
+    stage(a[a.index("--version") + 1] if "--version" in a else "2.0", "--draft" in a)

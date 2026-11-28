@@ -154,6 +154,9 @@ AutoFrame:
 	IFD	AUTOPREFS
 	BSR	AutoPrefsLine
 	ENDC
+	IFD	AMG_RTG
+	JSR	AmgRtgAuto		; RTG test builds: the cost line and the picture (AmgRtg.asm)
+	ENDC
 	IFD	AUTONOHOLD
 	BRA.S	.held			; real A1200: no PC on the serial port, leave straight away
 	ENDC
@@ -336,6 +339,12 @@ AutoGrab:
 	BTST	#14,D0
 	BEQ.S	.hold
 	MOVE.W	#$0800,$09C(A6)
+	IFD	AMG_BIGTEST
+	CMP.L	#1,(SP)			; after the menu's grab: the big menu's Scanlines picked (AmgMenu.asm)
+	BNE.S	.nb
+	JSR	bm_autotest
+.nb:
+	ENDC
 	MOVEM.L	(SP)+,D0-D2/A0-A1/A6
 	RTS
 	ENDC
@@ -594,6 +603,10 @@ AutoPrefsText:	DC.B	"@R PRF"
 
 AutoFrames:	DC.L	0
 AutoNext:	DC.L	AutoStops
+	IFD	AUTOOPT
+; RTG option costs (AmgRtg.asm): two stops 150 frames apart; no RTG drawing before AUTOOPT - 50
+AutoStops:	DC.L	AUTOOPT,AUTOOPT+150,0
+	ELSE
 	IFD	AUTOPREFS
 AutoStops:	DC.L	100,0			; prefs checks: one stop
 	ELSE
@@ -629,6 +642,7 @@ AutoStops:	DC.L	300,600,1200,1800,0
 	ENDC
 	ENDC
 	ENDC
+	ENDC				; (AUTOOPT)
 	IFD	AUTOPAD
 ; from, to (frames), bits of port $DC pressed: bit 4 button 1, bit 5 button 2
 	IFD	AUTOOASIS

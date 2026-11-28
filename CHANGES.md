@@ -1,9 +1,67 @@
 # Changes from Juan's v0.8
 
-AmiMasterGear 1.3 is built from the sources of AmiMasterGear v0.8 (12 December 1999) by Juan
+AmiMasterGear 2.0 is built from the sources of AmiMasterGear v0.8 (12 December 1999) by Juan
 Antonio Gómez Gálvez. This file lists what changed for the user, grouped. Every change sits
 behind its own assembler switch (`AMG_` names in `src/Amg10.asm`); without them the source
 builds Juan's v0.8 byte for byte.
+
+## 2.0 (28 November 2026)
+
+Two programs: **AGA** (the 1.3 program, titles saying 2.0: `AMG_V20`) and **RTG**, new. The old
+single program was called AmiMasterGear.
+
+### The RTG program
+- The game on a 16-bit Picasso96 screen, for PiStorm-class machines (`AMG_RTG`, `src/AmgRtg.asm`).
+  The program draws the Master System's picture mode line by line as the emulated beam leaves
+  each line, from the video RAM, registers and palette as they are then, so mid-frame changes
+  show where the game makes them; only lines that changed since the last frame are copied. None
+  of the AGA drawing runs.
+- Speed from a CIA-B timer at the console's rate (59.92 Hz NTSC, 49.70 Hz PAL), never from the
+  display's refresh. Frame skip as in the AGA program.
+- Screen: Sharp (default) opens 960x540, exactly half of 1080p, with the Master System at 2x and
+  the Game Gear at 3x (`AMG_RTGHALF`); Bigger opens the mode the picture fills best and leaves
+  the rest to the graphics board's scaler.
+- Scanlines (`AMG_RTGSCAN`): the seven settings of Arnold, in its order and words: Off, Hard
+  25%, Hard 50%, Hard 75%, Blended light, Blended, Blended strong. Hard darkens the lower half of
+  each game line's rows; Blended averages the line with the next one, then darkens (rounded
+  down, as Arnold). Hard costs 2-5% of a frame, Blended 7-11% (WinUAE).
+- Buffering (`AMG_RTGDBUF`, `AMG_DBUFDEF`): Double, the default, draws each frame to a hidden
+  page and shows it with a pan timed 5 ms before the display's next vertical blank (its period
+  and phase measured at open; every pan's return re-anchors it). Single draws straight to the
+  screen.
+- Settings in `AmiMasterGear.config` in the program's drawer (`Screen`, `Scanlines`,
+  `ScanlineStyle`, `Buffering`, `Menu`), or the RTG icon's ToolTypes `RTGSCREEN=`,
+  `SCANLINES=`, `SCANLINESTYLE=`, `BUFFERING=`, which win (`AMG_RTGCFG`, `src/AmgRtgCfg.asm`).
+  A sample config is in the drawer.
+- Without a usable Picasso96 mode the program runs as the AGA program.
+
+### Big menu
+- The menu opens at 1920x1080 (else 1280x720) on the graphics board (`AMG_BIGMENU`,
+  `src/AmgMenu.asm`): Juan's GadTools menu scaled at open time, drawn in a pixel font at the
+  screen's own size, with the logo and the pad pictures redrawn, and the selectors trimmed to
+  the text's height. Without those modes: 640x270, else 640x256 (`AMG_RTGMENU`); `Menu = Classic`
+  in the config asks for that one.
+- Screen Options has Scanlines (Off / On) and Style (an OS 3.2 chooser pop-up, else a cycle
+  gadget). A change is written to the config at once (other lines in the file are kept).
+
+### Also in the RTG program
+- Everything from 1.3 (`AMG_NOISESTOP`, `AMG_NAMECAP`).
+
+### Checked
+- On an A1200 with a PiStorm (Emu68), HDMI 1080p60: Micro Machines NTSC and PAL with Double (no
+  tearing), Sonic with Scanlines On, Hard 50%, the big menu, the scanline settings kept in the
+  config. At 1080p50: the frame timing logged in Micro Machines with Single and with Double.
+- In WinUAE (uaegfx): every scanline setting matched a model of the maths pixel for pixel (56
+  pictures); both release programs started from their icons to the menu (RTG: the big menu);
+  the RTG program's release switches in a test build ran Sonic the Hedgehog on the Master
+  System and the Game Gear, with Single and Double.
+- `sh build.sh rel` still builds 1.3 byte for byte, `rel12` 1.2; the AGA program differs from 1.3
+  only in its version texts (13 bytes).
+
+### Known differences (RTG)
+- Double with the display at 50 Hz: about 4% of frames miss the blank and show a frame late (a
+  small judder). At 60 Hz it is clean. Workaround: Single, or 60 Hz output.
+- The TMS9918 picture modes (Black Sea Treasure Hunters) are not drawn yet: black.
 
 ## 1.3 (27 November 2026)
 

@@ -1,12 +1,13 @@
 # Notice
 
-- **AmiMasterGear** is by Juan Antonio Gómez Gálvez and z00p. It is freeware by Juan Antonio Gómez Gálvez (GUS Entertainment). Version 1.3, by z00p, is a community update, made and published with his permission: Juan gave his sources to the community to use as they want.
+- **AmiMasterGear** is by Juan Antonio Gómez Gálvez and z00p. It is freeware by Juan Antonio Gómez Gálvez (GUS Entertainment). Version 2.0, by z00p, is a community update, made and published with his permission: Juan gave his sources to the community to use as they want.
 - **Icons and graphics** in Juan's original: Multivac.
 - **CD32 pad read** (in `src/Amg10.asm`, `AmgCd32read`): z00p's ReadCD32Pads with FAmiga's changes by Afrotechmods, under the MIT licence below.
+- **RTG menu kit** (`src/rtgmenu.s`, `src/rtgmenu_data.s`) and the **Pixel font** (`src/data/rmfont_*.bin`): z00p, under the same MIT licence (`src/rtgmenu.LICENSE`). The big menu's logo and pad pictures are those of Juan's original, redrawn at the menu's resolution.
 - **Sega Master System** and **Game Gear** are trademarks of Sega. This project is not affiliated with or endorsed by Sega.
 - **Games** are not included. They are copyright of their owners. PadTest.sms and PadTest.gg are our own test cartridges (`tools/padtest_sms.py`).
 
-## MIT licence (the CD32 pad read)
+## MIT licence (the CD32 pad read and the RTG menu kit)
 
 ```
 MIT License

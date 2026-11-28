@@ -37,6 +37,9 @@ ColorDebug=1
 
 	BRA.S	Vamos
 	IFD	AMG_TITLES
+	IFD	AMG_V20
+	DC.B	"$VER: AmiMasterGear 2.0 (28.11.2026)",0,0
+	ELSE
 	IFD	AMG_V13
 	DC.B	"$VER: AmiMasterGear 1.3 (27.11.2026)",0,0
 	ELSE
@@ -44,6 +47,7 @@ ColorDebug=1
 	DC.B	"$VER: AmiMasterGear 1.2 (25.11.2026)",0,0
 	ELSE
 	DC.B	"$VER: AmiMasterGear 1.1 (23.11.2026)",0,0
+	ENDC
 	ENDC
 	ENDC
 	ELSE
@@ -5059,6 +5063,9 @@ MiraInterFin:
 	IFD	AMG_M224
 	JSR	AmgM224Frame		; 192 or 224 lines, from the registers at the frame's start
 	ENDC
+	IFD	AMG_RTG
+	JSR	AmgRtgFrame0		; RTG: the frame's height, scroll and lines to draw (AmgRtg.asm)
+	ENDC
 ;	---
 	LEA	Regs(PC),A3
 	MOVEM.L	Bufer(A3),D0-D7/A0-A7
@@ -5076,6 +5083,9 @@ MiraInterFin:
 MiraInter:
 	ADDQ.W	#1,CurLine(A3)
 	MOVE.W	CurLine(A3),D1
+	IFD	AMG_RTG
+	JMP	AmgRtgMI		; RTG: the line that ended drawn first (AmgRtg.asm)
+	ENDC
 	JMP	([JumpCurLine.W,PC,D1.W*4])
 MiraInterBuc:
 	SUBQ.B	#1,HorLine(A3)
@@ -5299,6 +5309,12 @@ JumpCurLine:
 ; ---------------------------------=> Emulación de 1 Frame.
 	CNOP	0,4
 Emula1Frame:
+	IFD	AMG_RTG
+	TST.B	AmgRtgOn
+	BEQ.S	AmgRtgE1F
+	JMP	AmgRtgFrame		; RTG: the frame to the screen, then the pacing (AmgRtg.asm)
+AmgRtgE1F:
+	ENDC
 
 	CMP.B	#1,DirPrefs+$13		; ¿Modo "Fast"?
 	BEQ.S	ModoFrames
@@ -8305,6 +8321,12 @@ Font:	INCBIN	"data/Font.raw"
 	INCLUDE	"AutoTest.asm"
 	ENDC
 	INCLUDE	"Amg10.asm"		; 1.0 additions, each behind its own AMG_ switch
+	IFD	AMG_RTG
+	INCLUDE	"AmgRtg.asm"		; 2.0: the RTG program's picture
+	ENDC
+	IFD	AMG_BIGMENU
+	INCLUDE	"AmgMenu.asm"		; 2.0: the big RTG menu
+	ENDC
 ;	------------------------
 	SECTION	Pantallas,DATA_C
 ;	------------------------
